@@ -68,6 +68,13 @@ create table if not exists public.whatsapp_settings (
 
 alter table public.whatsapp_settings enable row level security;
 
+drop policy if exists whatsapp_settings_deny_client_access on public.whatsapp_settings;
+create policy whatsapp_settings_deny_client_access
+on public.whatsapp_settings
+for all
+using (false)
+with check (false);
+
 drop trigger if exists whatsapp_settings_set_updated_at on public.whatsapp_settings;
 create trigger whatsapp_settings_set_updated_at
 before update on public.whatsapp_settings
