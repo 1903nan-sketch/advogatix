@@ -163,6 +163,15 @@
     throw new Error(message);
   }
 
+  $("#togglePassword").addEventListener("click", () => {
+    const input = $("#password");
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    $("#togglePassword").textContent = showing ? "Mostrar" : "Ocultar";
+    $("#togglePassword").setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
+    $("#togglePassword").title = showing ? "Mostrar senha" : "Ocultar senha";
+  });
+
   $("#authForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.submitter || $("#authSubmit");
@@ -176,7 +185,11 @@
       if (error) throw error;
       await boot();
     } catch (error) {
-      setStatus($("#authStatus"), error.message || "E-mail ou senha inválidos.", "err");
+      const message = String(error?.message || "");
+      const friendly = /invalid login credentials/i.test(message)
+        ? "E-mail ou senha inválidos. Verifique se o usuário foi criado em Authentication > Users no Supabase."
+        : (message || "Não foi possível entrar.");
+      setStatus($("#authStatus"), friendly, "err");
     } finally {
       setBusy(button, false);
     }
