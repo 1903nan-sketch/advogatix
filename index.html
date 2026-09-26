@@ -39,22 +39,16 @@
         </section>
 
         <section class="card login-card">
-          <div class="tabs">
-            <button id="tabLogin" class="tab active" type="button">Entrar</button>
-            <button id="tabSignup" class="tab" type="button">Criar conta</button>
-          </div>
+          <div class="eyebrow" style="margin-bottom:10px">Acesso autorizado</div>
+          <h2 style="margin:0 0 5px">Entrar no painel</h2>
+          <p class="muted" style="margin:0 0 16px">Use o e-mail e a senha cadastrados pelo administrador do AdvogaTix.</p>
 
           <form id="authForm">
-            <div id="signupNameWrap" class="hidden">
-              <label for="name">Nome do advogado</label>
-              <input id="name" autocomplete="name" placeholder="Seu nome" />
-            </div>
-
             <label for="email">E-mail</label>
             <input id="email" type="email" autocomplete="email" required placeholder="voce@escritorio.com.br" />
 
             <label for="password">Senha</label>
-            <input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+            <input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Sua senha" />
 
             <button id="authSubmit" class="btn full" style="margin-top:14px">Entrar no painel</button>
             <div id="authStatus" class="status"></div>
@@ -77,7 +71,7 @@
 
       <section id="onboardingArea" class="card onboarding hidden">
         <h2>Configure seu escritório</h2>
-        <p class="muted">Esta conta ainda não pertence a um escritório. Crie o primeiro acesso para abrir o painel.</p>
+        <p class="muted">Esta conta já está autorizada. Agora configure os dados do escritório para abrir o painel.</p>
 
         <form id="firmForm">
           <label for="firmInput">Nome do escritório</label>
