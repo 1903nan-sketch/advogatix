@@ -48,7 +48,10 @@
             <input id="email" type="email" autocomplete="email" required placeholder="voce@escritorio.com.br" />
 
             <label for="password">Senha</label>
-            <input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Sua senha" />
+            <div class="password-field">
+              <input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Sua senha" />
+              <button id="togglePassword" class="password-toggle" type="button" aria-label="Mostrar senha" title="Mostrar senha">Mostrar</button>
+            </div>
 
             <button id="authSubmit" class="btn full" style="margin-top:14px">Entrar no painel</button>
             <div id="authStatus" class="status"></div>
