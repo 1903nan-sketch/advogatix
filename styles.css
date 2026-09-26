@@ -224,3 +224,12 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
   .modal-grid{grid-template-columns:1fr}.modal-grid .full{grid-column:auto}.nav{grid-template-columns:1fr 1fr}
   .topbar{align-items:flex-start}.quick-actions{grid-template-columns:1fr}.modal-actions .btn{flex:1}
 }
+
+.password-field{position:relative}
+.password-field input{padding-right:88px}
+.password-toggle{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  border:1px solid var(--border);background:var(--panel-2);color:var(--muted);
+  border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700
+}
+.password-toggle:hover{color:var(--text);border-color:rgba(214,179,106,.4)}
