@@ -862,6 +862,24 @@
       : '<div class="empty">Nenhuma movimentação encontrada.</div>';
   }
 
+  async function retryWhatsapp(updateId, button) {
+    if (!updateId) return;
+    setBusy(button, true, "Enviando");
+    try {
+      await invokeWhatsapp({
+        action: "send",
+        firm_id: state.firm.id,
+        case_update_id: updateId,
+      });
+      toast("Mensagem reenviada com sucesso.");
+      await loadData();
+    } catch (error) {
+      toast(error.message || "Não foi possível reenviar a mensagem.", "err");
+    } finally {
+      setBusy(button, false);
+    }
+  }
+
   function renderMessages() {
     const list = state.notifications.filter((n) => n.channel === "whatsapp");
     $("#messageCount").textContent = `${list.length} mensagens`;
@@ -871,6 +889,7 @@
           const client = clientById(n.client_id);
           const statusType = n.status === "sent" ? "ok" : n.status === "failed" ? "err" : "warn";
           const statusText = n.status === "sent" ? "Enviado" : n.status === "failed" ? "Falhou" : n.status === "pending" ? "Pendente" : n.status;
+          const canRetry = n.case_update_id && ["failed", "pending"].includes(n.status);
           return `
             <tr>
               <td>${brDate(n.sent_at || n.created_at)}</td>
@@ -878,9 +897,14 @@
               <td>${badge(statusText, statusType)}</td>
               <td class="message-cell"><div class="message-preview" title="${esc(n.message_body || n.error_message || "")}">${esc(n.message_body || n.error_message || "—")}</div></td>
               <td>${esc(n.provider_message_id || "—")}</td>
+              <td>${canRetry ? `<button class="btn secondary sm" data-retry-update="${n.case_update_id}">Reenviar</button>` : ""}</td>
             </tr>`;
         }).join("")
-      : '<tr><td colspan="5" class="empty">Nenhuma mensagem enviada ainda.</td></tr>';
+      : '<tr><td colspan="6" class="empty">Nenhuma mensagem enviada ainda.</td></tr>';
+
+    $("[data-retry-update]").forEach((button) => {
+      button.addEventListener("click", () => retryWhatsapp(button.dataset.retryUpdate, button));
+    });
   }
 
   function renderAll() {
