@@ -7,7 +7,6 @@
   const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
 
   const state = {
-    authMode: "login",
     user: null,
     firm: null,
     role: null,
@@ -164,46 +163,20 @@
     throw new Error(message);
   }
 
-  function setAuthMode(mode) {
-    state.authMode = mode;
-    $("#tabLogin").classList.toggle("active", mode === "login");
-    $("#tabSignup").classList.toggle("active", mode === "signup");
-    $("#signupNameWrap").classList.toggle("hidden", mode !== "signup");
-    $("#authSubmit").textContent = mode === "login" ? "Entrar no painel" : "Criar conta de advogado";
-    setStatus($("#authStatus"));
-  }
-
-  $("#tabLogin").addEventListener("click", () => setAuthMode("login"));
-  $("#tabSignup").addEventListener("click", () => setAuthMode("signup"));
-
   $("#authForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.submitter || $("#authSubmit");
     const email = $("#email").value.trim();
     const password = $("#password").value;
-    setBusy(button, true, state.authMode === "login" ? "Entrando" : "Criando");
+    setBusy(button, true, "Entrando");
     setStatus($("#authStatus"), "Aguarde...");
 
     try {
-      if (state.authMode === "signup") {
-        const fullName = $("#name").value.trim();
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName } },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          setStatus($("#authStatus"), "Conta criada. Confirme o e-mail recebido e depois entre.", "ok");
-          return;
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       await boot();
     } catch (error) {
-      setStatus($("#authStatus"), error.message || "Não foi possível autenticar.", "err");
+      setStatus($("#authStatus"), error.message || "E-mail ou senha inválidos.", "err");
     } finally {
       setBusy(button, false);
     }
