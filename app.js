@@ -477,7 +477,9 @@
         ? $("#movementDecisionSummary").value.trim()
         : type === "custom"
           ? $("#movementCustomSummary").value.trim()
-          : $("#movementSummary").value.trim();
+          : type === "expert_exam"
+            ? $("#movementExpertSummary").value.trim()
+            : $("#movementHearingSummary").value.trim();
 
     return {
       firm_id: state.firm.id,
