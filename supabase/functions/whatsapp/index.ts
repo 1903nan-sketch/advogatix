@@ -17,7 +17,6 @@ function json(data: unknown, status = 200) {
 function getSecretKey() {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (legacy) return legacy;
-
   const modern = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (modern) {
     try {
@@ -92,7 +91,7 @@ function buildMessage(update: any, courtCase: any, client: any) {
     if (update.summary) lines.push("Observação: " + update.summary);
     changed.push(lines.join("\n"));
   } else {
-    const title = update.title ? "*"+update.title+"*" : "*Nova movimentação*";
+    const title = update.title ? "*" + update.title + "*" : "*Nova movimentação*";
     const detail = update.summary || update.client_text || "";
     changed.push(detail ? title + "\n" + detail : title);
   }
@@ -116,14 +115,73 @@ function buildMessage(update: any, courtCase: any, client: any) {
     "*Abaixo, o que mudou:*\n\n" + changed.join("\n\n"),
   ];
 
-  if (processInfo.length) {
-    blocks.push("*Informações importantes do processo*\n\n" + processInfo.join("\n"));
-  }
-  if (clientInfo.length) {
-    blocks.push("*Informações importantes do cliente*\n\n" + clientInfo.join("\n"));
-  }
-
+  if (processInfo.length) blocks.push("*Informações importantes do processo*\n\n" + processInfo.join("\n"));
+  if (clientInfo.length) blocks.push("*Informações importantes do cliente*\n\n" + clientInfo.join("\n"));
   return blocks.join("\n\n");
+}
+
+function safeSlug(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 45);
+}
+
+function stateFromInstance(payload: any) {
+  const item = Array.isArray(payload) ? payload[0] : payload;
+  return (
+    item?.instance?.state ||
+    item?.instance?.connectionStatus ||
+    item?.connectionStatus ||
+    item?.state ||
+    item?.status ||
+    null
+  );
+}
+
+function phoneFromInstance(payload: any) {
+  const item = Array.isArray(payload) ? payload[0] : payload;
+  const raw =
+    item?.instance?.ownerJid ||
+    item?.ownerJid ||
+    item?.instance?.number ||
+    item?.number ||
+    item?.instance?.profileName ||
+    null;
+  if (!raw) return null;
+  return String(raw).replace(/@.+$/, "");
+}
+
+function qrFromPayload(payload: any) {
+  if (!payload) return { qr_base64: null, qr_code: null, pairing_code: null };
+  const base64 =
+    payload?.base64 ||
+    payload?.qrcode?.base64 ||
+    payload?.data?.base64 ||
+    payload?.data?.qrcode?.base64 ||
+    null;
+  const code =
+    payload?.code ||
+    payload?.qrcode?.code ||
+    payload?.data?.code ||
+    payload?.data?.qrcode?.code ||
+    null;
+  const pairing =
+    payload?.pairingCode ||
+    payload?.pairing_code ||
+    payload?.data?.pairingCode ||
+    null;
+  return { qr_base64: base64, qr_code: code, pairing_code: pairing };
+}
+
+async function parseResponse(response: Response) {
+  const raw = await response.text();
+  let payload: any = {};
+  try { payload = raw ? JSON.parse(raw) : {}; } catch (_) { payload = { raw }; }
+  return { raw, payload };
 }
 
 Deno.serve(async (req: Request) => {
@@ -166,59 +224,158 @@ Deno.serve(async (req: Request) => {
 
     if (memberError || !membership) return json({ error: "Sem acesso a este escritório." }, 403);
 
+    const { data: evolutionRows, error: evolutionError } = await admin.rpc("get_advogatix_evolution_config");
+    const evolution = Array.isArray(evolutionRows) ? evolutionRows[0] : evolutionRows;
+    const baseUrl = String(evolution?.base_url ?? "").replace(/\/+$/, "");
+    const globalApiKey = String(evolution?.api_key ?? "");
+    if (evolutionError || !baseUrl || !globalApiKey) {
+      return json({ error: "Servidor do WhatsApp ainda não está configurado." }, 500);
+    }
+
     if (action === "status") {
       const { data: settings } = await admin
         .from("whatsapp_settings")
-        .select("base_url,instance_name,enabled,api_key")
+        .select("instance_name,enabled,connection_state,connected_number,last_connected_at")
         .eq("firm_id", firmId)
         .maybeSingle();
 
+      if (!settings?.instance_name) {
+        return json({ configured: false, enabled: false, connection_state: "not_connected" });
+      }
+
+      let remoteState = settings.connection_state || "configured";
+      let connectedNumber = settings.connected_number || null;
+      try {
+        const res = await fetch(
+          baseUrl + "/instance/fetchInstances?instanceName=" + encodeURIComponent(settings.instance_name),
+          { headers: { apikey: globalApiKey } }
+        );
+        if (res.ok) {
+          const { payload } = await parseResponse(res);
+          remoteState = stateFromInstance(payload) || remoteState;
+          connectedNumber = phoneFromInstance(payload) || connectedNumber;
+          await admin.from("whatsapp_settings").update({
+            connection_state: remoteState,
+            connected_number: connectedNumber,
+            last_connected_at: ["open", "connected"].includes(String(remoteState).toLowerCase())
+              ? new Date().toISOString()
+              : settings.last_connected_at,
+          }).eq("firm_id", firmId);
+        }
+      } catch (_) {}
+
       return json({
-        configured: !!settings?.api_key,
-        enabled: !!settings?.enabled,
-        base_url: settings?.base_url ?? "",
-        instance_name: settings?.instance_name ?? "",
-        api_key_masked: settings?.api_key ? "••••••" + String(settings.api_key).slice(-4) : "",
+        configured: true,
+        enabled: settings.enabled !== false,
+        instance_name: settings.instance_name,
+        connection_state: remoteState,
+        connected_number: connectedNumber,
       });
     }
 
-    if (action === "save_config") {
-      if (membership.role !== "owner") return json({ error: "Somente o proprietário pode alterar a integração." }, 403);
-
-      const baseUrlInput = String(body.base_url ?? "").trim().replace(/\/+$/, "");
-      const instanceName = String(body.instance_name ?? "").trim();
-      const apiKeyInput = String(body.api_key ?? "").trim();
-      const enabled = body.enabled !== false;
-
-      if (!baseUrlInput || !instanceName) return json({ error: "Informe a URL da Evolution API e a instância." }, 400);
-      try {
-        const parsed = new URL(baseUrlInput);
-        if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("protocol");
-      } catch (_) {
-        return json({ error: "URL da Evolution API inválida." }, 400);
+    if (action === "connect") {
+      if (membership.role !== "owner") {
+        return json({ error: "Somente o proprietário pode conectar o WhatsApp." }, 403);
       }
+
+      const { data: firm } = await admin
+        .from("law_firms")
+        .select("name,slug")
+        .eq("id", firmId)
+        .single();
 
       const { data: current } = await admin
         .from("whatsapp_settings")
-        .select("api_key")
+        .select("*")
         .eq("firm_id", firmId)
         .maybeSingle();
 
-      const apiKey = apiKeyInput || current?.api_key || "";
-      if (!apiKey) return json({ error: "Informe a API Key da Evolution API." }, 400);
+      const instanceName = current?.instance_name ||
+        ("advogatix-" + safeSlug(firm?.slug || firm?.name || firmId.slice(0, 8)) + "-" + firmId.slice(0, 8));
 
-      const { error } = await admin.from("whatsapp_settings").upsert({
+      let createPayload: any = null;
+      let instanceExists = false;
+
+      try {
+        const check = await fetch(
+          baseUrl + "/instance/fetchInstances?instanceName=" + encodeURIComponent(instanceName),
+          { headers: { apikey: globalApiKey } }
+        );
+        if (check.ok) {
+          const { payload } = await parseResponse(check);
+          instanceExists = Array.isArray(payload) ? payload.length > 0 : !!payload?.instance;
+        }
+      } catch (_) {}
+
+      if (!instanceExists) {
+        const createRes = await fetch(baseUrl + "/instance/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: globalApiKey,
+          },
+          body: JSON.stringify({
+            instanceName,
+            qrcode: true,
+            integration: "WHATSAPP-BAILEYS",
+          }),
+        });
+        const parsed = await parseResponse(createRes);
+        createPayload = parsed.payload;
+
+        if (!createRes.ok) {
+          const detail =
+            createPayload?.response?.message?.[0] ||
+            createPayload?.message ||
+            createPayload?.error ||
+            parsed.raw ||
+            ("HTTP " + createRes.status);
+          if (!/already|exist/i.test(String(detail))) {
+            return json({ error: "Não foi possível criar a instância do WhatsApp.", detail: String(detail) }, 502);
+          }
+        }
+      }
+
+      await admin.from("whatsapp_settings").upsert({
         firm_id: firmId,
         provider: "evolution",
-        base_url: baseUrlInput,
+        base_url: null,
         instance_name: instanceName,
-        api_key: apiKey,
-        enabled,
+        api_key: null,
+        enabled: true,
+        connection_state: "connecting",
         updated_by: user.id,
       }, { onConflict: "firm_id" });
 
-      if (error) throw error;
-      return json({ ok: true });
+      let connectPayload: any = null;
+      try {
+        const connectRes = await fetch(
+          baseUrl + "/instance/connect/" + encodeURIComponent(instanceName),
+          { headers: { apikey: globalApiKey } }
+        );
+        const parsed = await parseResponse(connectRes);
+        connectPayload = parsed.payload;
+        if (!connectRes.ok && connectRes.status !== 404) {
+          return json({
+            error: "A instância foi criada, mas não foi possível gerar o QR Code.",
+            detail: String(connectPayload?.message || connectPayload?.error || parsed.raw || ("HTTP " + connectRes.status)),
+          }, 502);
+        }
+      } catch (_) {}
+
+      const qr = qrFromPayload(connectPayload || createPayload);
+      const connectionState = stateFromInstance(connectPayload) || "connecting";
+
+      await admin.from("whatsapp_settings").update({
+        connection_state: connectionState,
+      }).eq("firm_id", firmId);
+
+      return json({
+        ok: true,
+        instance_name: instanceName,
+        connection_state: connectionState,
+        ...qr,
+      });
     }
 
     if (action === "send") {
@@ -262,8 +419,8 @@ Deno.serve(async (req: Request) => {
         .eq("firm_id", firmId)
         .maybeSingle();
 
-      if (settingsError || !settings || !settings.enabled) {
-        return json({ error: "Integração do WhatsApp não configurada ou desativada." }, 400);
+      if (settingsError || !settings?.enabled || !settings?.instance_name) {
+        return json({ error: "WhatsApp ainda não foi conectado para este escritório." }, 400);
       }
 
       const message = buildMessage(update, courtCase, client);
@@ -301,19 +458,19 @@ Deno.serve(async (req: Request) => {
           })
           .select("*")
           .single();
+
         if (createError) throw createError;
         notification = created;
       }
 
-      const endpoint = settings.base_url.replace(/\/+$/, "") +
-        "/message/sendText/" + encodeURIComponent(settings.instance_name);
+      const endpoint = baseUrl + "/message/sendText/" + encodeURIComponent(settings.instance_name);
 
       try {
         const response = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "apikey": settings.api_key,
+            apikey: globalApiKey,
           },
           body: JSON.stringify({
             number: phone,
@@ -323,23 +480,33 @@ Deno.serve(async (req: Request) => {
           }),
         });
 
-        const raw = await response.text();
-        let payload: any = {};
-        try { payload = raw ? JSON.parse(raw) : {}; } catch (_) { payload = { raw }; }
+        const parsed = await parseResponse(response);
+        const payload = parsed.payload;
 
         if (!response.ok) {
-          const errorMessage = payload?.message || payload?.error || raw || ("HTTP " + response.status);
+          const errorMessage =
+            payload?.response?.message?.[0] ||
+            payload?.message ||
+            payload?.error ||
+            parsed.raw ||
+            ("HTTP " + response.status);
+
           await admin.from("notifications").update({
             status: "failed",
             error_message: String(errorMessage).slice(0, 1000),
             response_payload: payload,
             updated_at: new Date().toISOString(),
           }).eq("id", notification.id);
+
           return json({ error: "Falha ao enviar pelo WhatsApp.", detail: String(errorMessage), message }, 502);
         }
 
         const providerMessageId =
-          payload?.key?.id || payload?.data?.key?.id || payload?.messageId || payload?.id || null;
+          payload?.key?.id ||
+          payload?.data?.key?.id ||
+          payload?.messageId ||
+          payload?.id ||
+          null;
 
         await admin.from("notifications").update({
           status: "sent",
@@ -359,6 +526,7 @@ Deno.serve(async (req: Request) => {
           error_message: detail.slice(0, 1000),
           updated_at: new Date().toISOString(),
         }).eq("id", notification.id);
+
         return json({ error: "Não foi possível conectar à Evolution API.", detail, message }, 502);
       }
     }
