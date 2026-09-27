@@ -233,3 +233,17 @@ dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
   border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700
 }
 .password-toggle:hover{color:var(--text);border-color:rgba(214,179,106,.4)}
+
+
+.wa-qr-wrap{
+  display:grid;place-items:center;text-align:center;gap:9px;
+  padding:18px;border:1px solid var(--border);border-radius:14px;
+  background:#fff;color:#111;margin:0 0 14px;
+}
+.wa-qr-wrap strong{font-size:14px}
+.wa-qr-wrap span{font-size:12px;color:#555}
+.wa-qr{
+  width:230px;min-height:230px;display:grid;place-items:center;
+  background:#fff;padding:10px;border-radius:10px;
+}
+.wa-qr img,.wa-qr canvas{max-width:100%;height:auto!important}
