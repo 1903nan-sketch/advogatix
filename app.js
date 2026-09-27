@@ -628,61 +628,129 @@
     }
   });
 
+  function normalizeWhatsAppState(value) {
+    const state = String(value || "").toLowerCase();
+    if (["open", "connected", "online"].includes(state)) return "connected";
+    if (["connecting", "created", "configured"].includes(state)) return "connecting";
+    if (["close", "closed", "disconnected", "logout"].includes(state)) return "disconnected";
+    return state || "not_connected";
+  }
+
+  function renderWhatsAppQr(data) {
+    const wrap = $("#waQrWrap");
+    const target = $("#waQr");
+    target.innerHTML = "";
+
+    const base64 = data?.qr_base64;
+    const rawCode = data?.qr_code;
+
+    if (base64) {
+      const img = document.createElement("img");
+      img.alt = "QR Code para conectar o WhatsApp";
+      img.src = String(base64).startsWith("data:image") ? base64 : "data:image/png;base64," + base64;
+      target.appendChild(img);
+      wrap.classList.remove("hidden");
+      return true;
+    }
+
+    if (rawCode && window.QRCode) {
+      new QRCode(target, {
+        text: rawCode,
+        width: 210,
+        height: 210,
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+      wrap.classList.remove("hidden");
+      return true;
+    }
+
+    wrap.classList.add("hidden");
+    return false;
+  }
+
   async function loadWhatsappStatus() {
     if (!state.firm) return;
     const box = $("#integrationState");
     const text = $("#integrationStateText");
+    const info = $("#waConnectedInfo");
 
     try {
       const data = await invokeWhatsapp({ action: "status", firm_id: state.firm.id });
       state.whatsapp = data || state.whatsapp;
-      const configured = !!data?.configured;
-      box.classList.toggle("connected", configured && data.enabled);
-      text.textContent = configured
-        ? data.enabled
-          ? `Configurado • instância ${data.instance_name}`
-          : "Configurado, porém desativado"
-        : "Integração ainda não configurada";
 
-      $("#waBaseUrl").value = data?.base_url || "";
-      $("#waInstance").value = data?.instance_name || "";
-      $("#waApiKey").value = "";
-      $("#waApiKey").placeholder = data?.api_key_masked || "Cole sua API Key";
-      $("#waEnabled").checked = data?.enabled !== false;
+      const status = normalizeWhatsAppState(data?.connection_state);
+      const connected = status === "connected";
+      const configured = !!data?.configured;
+
+      box.classList.toggle("connected", connected);
+
+      if (connected) {
+        text.textContent = "WhatsApp conectado";
+        const number = data?.connected_number ? ` • ${data.connected_number}` : "";
+        info.textContent = `Instância ${data.instance_name || ""}${number}`;
+        info.classList.remove("hidden");
+        $("#waConnectBtn").textContent = "Gerar novo QR Code";
+      } else if (configured) {
+        text.textContent = status === "connecting"
+          ? "Aguardando conexão do WhatsApp"
+          : "WhatsApp configurado, mas desconectado";
+        info.textContent = `Instância ${data.instance_name || ""}`;
+        info.classList.remove("hidden");
+        $("#waConnectBtn").textContent = "Conectar WhatsApp";
+      } else {
+        text.textContent = "WhatsApp ainda não conectado";
+        info.classList.add("hidden");
+        $("#waConnectBtn").textContent = "Conectar WhatsApp";
+      }
+
+      if (connected) $("#waQrWrap").classList.add("hidden");
+      setStatus($("#waStatus"));
     } catch (error) {
       box.classList.remove("connected");
-      text.textContent = "Não foi possível consultar a integração";
-      setStatus($("#waStatus"), error.message, "err");
+      text.textContent = "Não foi possível consultar o WhatsApp";
+      setStatus($("#waStatus"), error.message || "Falha ao consultar a integração.", "err");
     }
 
     const owner = state.role === "owner";
-    $("#whatsappForm").classList.toggle("readonly", !owner);
-    $$("#whatsappForm input, #whatsappForm button").forEach((el) => {
-      el.disabled = !owner;
-    });
+    $("#waConnectBtn").disabled = !owner;
     $("#waPermissionNote").classList.toggle("hidden", owner);
   }
 
-  $("#whatsappForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = event.submitter;
-    setBusy(button, true, "Salvando");
-    setStatus($("#waStatus"), "Salvando configuração...");
+  $("#waRefreshBtn").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    setBusy(button, true, "Atualizando");
+    try {
+      await loadWhatsappStatus();
+    } finally {
+      setBusy(button, false);
+    }
+  });
+
+  $("#waConnectBtn").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    setBusy(button, true, "Gerando QR");
+    setStatus($("#waStatus"), "Preparando conexão com o WhatsApp...");
+    $("#waQrWrap").classList.add("hidden");
 
     try {
-      await invokeWhatsapp({
-        action: "save_config",
+      const data = await invokeWhatsapp({
+        action: "connect",
         firm_id: state.firm.id,
-        base_url: $("#waBaseUrl").value.trim(),
-        instance_name: $("#waInstance").value.trim(),
-        api_key: $("#waApiKey").value.trim(),
-        enabled: $("#waEnabled").checked,
       });
-      setStatus($("#waStatus"), "Integração salva.", "ok");
-      toast("Configuração do WhatsApp salva.");
+
+      const hasQr = renderWhatsAppQr(data);
+      if (hasQr) {
+        setStatus($("#waStatus"), "QR Code gerado. Escaneie pelo WhatsApp e depois clique em Atualizar status.", "ok");
+      } else if (data?.pairing_code) {
+        setStatus($("#waStatus"), `Código de pareamento: ${data.pairing_code}`, "ok");
+      } else {
+        setStatus($("#waStatus"), "Instância criada. Clique em Atualizar status; se ainda estiver desconectada, gere o QR novamente.", "ok");
+      }
+
       await loadWhatsappStatus();
     } catch (error) {
-      setStatus($("#waStatus"), error.message || "Não foi possível salvar.", "err");
+      setStatus($("#waStatus"), error.message || "Não foi possível gerar o QR Code.", "err");
+      toast("Falha ao conectar o WhatsApp.", "err");
     } finally {
       setBusy(button, false);
     }
