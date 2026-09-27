@@ -331,35 +331,29 @@
 
             <div class="settings-grid">
               <div class="card setting-card">
-                <h3>WhatsApp — Evolution API</h3>
-                <p>A API Key fica protegida no backend e não é exposta no navegador depois de salva.</p>
+                <h3>WhatsApp do escritório</h3>
+                <p>O servidor Evolution API já está configurado e protegido no backend. Aqui você só conecta o número do escritório.</p>
 
                 <div id="integrationState" class="integration-state">
                   <span class="light"></span>
-                  <span id="integrationStateText">Consultando integração...</span>
+                  <span id="integrationStateText">Consultando WhatsApp...</span>
                 </div>
 
-                <form id="whatsappForm">
-                  <label for="waBaseUrl">URL da Evolution API</label>
-                  <input id="waBaseUrl" required placeholder="https://sua-evolution.exemplo.com" />
+                <div id="waConnectedInfo" class="notice hidden" style="margin-bottom:12px"></div>
 
-                  <label for="waInstance">Nome da instância</label>
-                  <input id="waInstance" required placeholder="advogatix" />
+                <div id="waQrWrap" class="wa-qr-wrap hidden">
+                  <div id="waQr" class="wa-qr"></div>
+                  <strong>Escaneie este QR Code no WhatsApp</strong>
+                  <span>WhatsApp → Aparelhos conectados → Conectar um aparelho</span>
+                </div>
 
-                  <label for="waApiKey">API Key</label>
-                  <input id="waApiKey" type="password" autocomplete="off" placeholder="Cole sua API Key" />
-                  <div class="small" style="margin-top:5px">Se já estiver configurada, deixe em branco para manter a chave atual.</div>
+                <div class="actions-row">
+                  <button id="waConnectBtn" class="btn" type="button">Conectar WhatsApp</button>
+                  <button id="waRefreshBtn" class="btn secondary" type="button">Atualizar status</button>
+                </div>
 
-                  <label style="display:flex;align-items:center;gap:8px;margin-top:14px">
-                    <input id="waEnabled" type="checkbox" checked style="width:auto" />
-                    Integração ativa
-                  </label>
-
-                  <button class="btn" style="margin-top:14px">Salvar integração</button>
-                  <div id="waStatus" class="status"></div>
-                </form>
-
-                <div id="waPermissionNote" class="notice hidden">Somente o proprietário do escritório pode alterar a integração.</div>
+                <div id="waStatus" class="status"></div>
+                <div id="waPermissionNote" class="notice hidden">Somente o proprietário do escritório pode conectar ou trocar o WhatsApp.</div>
               </div>
 
               <div class="card setting-card">
@@ -622,6 +616,7 @@
   <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
