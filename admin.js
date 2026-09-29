@@ -137,7 +137,7 @@
       maintenance_due_at: $("#adminMaintenanceDue").value || null,
       maintenance_status: $("#adminMaintenanceStatus").value,
       notes: $("#adminNotes").value.trim(),
-      redirect_to: `${publicAppOrigin()}/?setup=password`
+      redirect_to: "https://advogatix.vercel.app/?setup=password"
     };
     try {
       await invoke(body);
