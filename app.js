@@ -1278,8 +1278,52 @@
     renderAll();
   }
 
+  async function establishSetupSessionFromUrl() {
+    if (!SETUP_PASSWORD_MODE) return null;
+
+    const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+    const inviteType = hashParams.get("type");
+
+    if (accessToken && refreshToken && (!inviteType || inviteType === "invite")) {
+      const { data, error } = await rawSupabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) throw error;
+
+      history.replaceState(null, "", location.pathname + "?setup=password");
+      return data.session || null;
+    }
+
+    const query = new URLSearchParams(location.search);
+    const code = query.get("code");
+    if (code) {
+      const { data, error } = await rawSupabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+
+      history.replaceState(null, "", location.pathname + "?setup=password");
+      return data.session || null;
+    }
+
+    return null;
+  }
+
   async function boot() {
-    const { data: { session } } = await rawSupabase.auth.getSession();
+    let inviteSession = null;
+    if (SETUP_PASSWORD_MODE) {
+      try {
+        inviteSession = await establishSetupSessionFromUrl();
+      } catch (error) {
+        console.error(error);
+        setStatus($("#setupPasswordStatus"), "Este convite é inválido ou expirou. Solicite um novo convite.", "err");
+      }
+    }
+
+    const { data: { session } } = inviteSession
+      ? { data: { session: inviteSession } }
+      : await rawSupabase.auth.getSession();
     let user = session?.user || null;
     if (!user) {
       const { data } = await supabase.auth.getUser();
