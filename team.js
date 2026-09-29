@@ -93,7 +93,7 @@
         email: $("#teamEmail").value.trim(),
         role: $("#teamRole").value,
         oab_number: $("#teamOab").value.trim(),
-        redirect_to: `${publicAppOrigin()}/?setup=password`
+        redirect_to: "https://advogatix.vercel.app/?setup=password"
       });
       core.toast("Convite enviado.");
       $("#teamDialog").close();
