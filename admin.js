@@ -125,7 +125,8 @@
       maintenance_amount: $("#adminMaintenanceAmount").value,
       maintenance_due_at: $("#adminMaintenanceDue").value || null,
       maintenance_status: $("#adminMaintenanceStatus").value,
-      notes: $("#adminNotes").value.trim()
+      notes: $("#adminNotes").value.trim(),
+      redirect_to: `${location.origin}${location.pathname}?setup=password`
     };
     try {
       await invoke(body);

@@ -674,3 +674,9 @@ label.check input{width:auto;margin:2px 0 0;flex:0 0 auto;accent-color:var(--acc
 @media(max-width:460px){
   #adminApp .admin-metrics{grid-template-columns:1fr}
 }
+
+
+/* Primeiro acesso / criação de senha */
+.setup-layout{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:28px 0 50px}
+.setup-card{width:min(100%,480px);margin:0 auto}
+.setup-card input{width:100%}

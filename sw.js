@@ -1,5 +1,5 @@
 // Ao publicar uma nova versão, aumente ASSET_VERSION aqui e o ?v= em index.html.
-const ASSET_VERSION = "10";
+const ASSET_VERSION = "11";
 const CACHE = "advogatix-v" + ASSET_VERSION;
 const SHELL = [
   "./", "./index.html",

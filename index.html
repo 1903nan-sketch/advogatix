@@ -13,7 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
-  <link rel="stylesheet" href="./styles.css?v=10" />
+  <link rel="stylesheet" href="./styles.css?v=11" />
 </head>
 <body>
   <div id="previewBanner" class="preview-banner hidden" role="status">
@@ -67,6 +67,37 @@
 
             <button id="authSubmit" class="btn full" style="margin-top:14px">Entrar no painel</button>
             <div id="authStatus" class="status"></div>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+
+
+  <div id="passwordSetup" class="landing hidden">
+    <div class="wrap">
+      <header class="topbar">
+        <div class="brand"><div class="brand-mark"></div><span>AdvogaTix</span></div>
+        <div class="pill">Primeiro acesso</div>
+      </header>
+
+      <main class="setup-layout">
+        <section class="card login-card setup-card">
+          <div class="eyebrow" style="margin-bottom:10px">Convite do escritório</div>
+          <h2 style="margin:0 0 5px">Crie sua senha</h2>
+          <p class="muted" style="margin:0 0 16px">Defina sua senha para concluir o acesso ao AdvogaTix.</p>
+
+          <div id="setupAccountInfo" class="notice hidden" style="margin-bottom:14px"></div>
+
+          <form id="setupPasswordForm">
+            <label for="setupPasswordInput">Nova senha</label>
+            <input id="setupPasswordInput" type="password" autocomplete="new-password" minlength="8" required placeholder="Mínimo de 8 caracteres" />
+
+            <label for="setupPasswordConfirm">Confirmar senha</label>
+            <input id="setupPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required placeholder="Digite novamente" />
+
+            <button id="setupPasswordBtn" class="btn full" style="margin-top:14px">Criar minha senha</button>
+            <div id="setupPasswordStatus" class="status"></div>
           </form>
         </section>
       </main>
@@ -1538,11 +1569,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=10"></script>
-  <script src="./team.js?v=10"></script>
-  <script src="./app.js?v=10"></script>
-  <script src="./organizer.js?v=10"></script>
-  <script src="./features.js?v=10"></script>
-  <script src="./deadline-calc.js?v=10"></script>
+  <script src="./admin.js?v=11"></script>
+  <script src="./team.js?v=11"></script>
+  <script src="./app.js?v=11"></script>
+  <script src="./organizer.js?v=11"></script>
+  <script src="./features.js?v=11"></script>
+  <script src="./deadline-calc.js?v=11"></script>
 </body>
 </html>

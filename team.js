@@ -87,7 +87,8 @@
         full_name: $("#teamName").value.trim(),
         email: $("#teamEmail").value.trim(),
         role: $("#teamRole").value,
-        oab_number: $("#teamOab").value.trim()
+        oab_number: $("#teamOab").value.trim(),
+        redirect_to: `${location.origin}${location.pathname}?setup=password`
       });
       core.toast("Convite enviado.");
       $("#teamDialog").close();

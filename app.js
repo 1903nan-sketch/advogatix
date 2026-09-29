@@ -13,6 +13,8 @@
   const PREVIEW_READ_ONLY = false;
   const PREVIEW_MESSAGE = "Modo preview (somente leitura): nenhuma alteração é gravada nos dados reais.";
   const TIME_ZONE = "America/Sao_Paulo";
+  const SETUP_PASSWORD_MODE = new URLSearchParams(location.search).get("setup") === "password";
+  let completingPasswordSetup = false;
 
   // Histórico de atividades: a tabela "activity_logs" ainda não existe no Supabase.
   // Ao criá-la (ver docs/supabase-pendencias.md), mude para true para gravar e ler os registros.
@@ -330,6 +332,42 @@
   $("#logoutBtn").addEventListener("click", async () => {
     await supabase.auth.signOut();
     location.reload();
+  });
+
+  $("#setupPasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.submitter || $("#setupPasswordBtn");
+    const password = $("#setupPasswordInput").value;
+    const confirmation = $("#setupPasswordConfirm").value;
+
+    if (PREVIEW_READ_ONLY) {
+      setStatus($("#setupPasswordStatus"), PREVIEW_MESSAGE, "err");
+      return;
+    }
+    if (password.length < 8) {
+      setStatus($("#setupPasswordStatus"), "Use uma senha com pelo menos 8 caracteres.", "err");
+      return;
+    }
+    if (password !== confirmation) {
+      setStatus($("#setupPasswordStatus"), "As senhas não conferem.", "err");
+      return;
+    }
+
+    setBusy(button, true, "Salvando");
+    setStatus($("#setupPasswordStatus"), "Criando sua senha...");
+    try {
+      const { error } = await rawSupabase.auth.updateUser({ password });
+      if (error) throw error;
+
+      sessionStorage.setItem("advogatix_password_created", "1");
+      completingPasswordSetup = true;
+      await rawSupabase.auth.signOut();
+      location.replace(location.pathname);
+    } catch (error) {
+      setStatus($("#setupPasswordStatus"), error.message || "Não foi possível criar a senha.", "err");
+    } finally {
+      setBusy(button, false);
+    }
   });
 
   $("#firmForm")?.addEventListener("submit", async (event) => {
@@ -1241,15 +1279,46 @@
   }
 
   async function boot() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await rawSupabase.auth.getSession();
+    let user = session?.user || null;
+    if (!user) {
+      const { data } = await supabase.auth.getUser();
+      user = data.user || null;
+    }
     state.user = user || null;
 
     $("#adminApp")?.classList.add("hidden");
     $("#blockedArea")?.classList.add("hidden");
+    $("#passwordSetup")?.classList.add("hidden");
+
+    if (SETUP_PASSWORD_MODE) {
+      $("#landing").classList.add("hidden");
+      $("#app").classList.add("hidden");
+      $("#adminApp")?.classList.add("hidden");
+      $("#passwordSetup")?.classList.remove("hidden");
+
+      const info = $("#setupAccountInfo");
+      if (user) {
+        if (info) {
+          info.textContent = user.email ? `Acesso para ${user.email}` : "Convite confirmado.";
+          info.classList.remove("hidden");
+        }
+        $("#setupPasswordBtn").disabled = PREVIEW_READ_ONLY;
+        if (PREVIEW_READ_ONLY) setStatus($("#setupPasswordStatus"), PREVIEW_MESSAGE, "err");
+      } else {
+        $("#setupPasswordBtn").disabled = true;
+        setStatus($("#setupPasswordStatus"), "Este convite é inválido ou expirou. Solicite um novo convite ao administrador.", "err");
+      }
+      return;
+    }
 
     if (!user) {
       $("#landing").classList.remove("hidden");
       $("#app").classList.add("hidden");
+      if (sessionStorage.getItem("advogatix_password_created") === "1") {
+        sessionStorage.removeItem("advogatix_password_created");
+        setStatus($("#authStatus"), "Senha criada com sucesso. Entre com seu e-mail e sua nova senha.", "ok");
+      }
       return;
     }
 
@@ -1330,8 +1399,17 @@
     window.AdvogaTeam?.boot(window.AdvogaCore);
   }
 
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session && state.user) location.reload();
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (SETUP_PASSWORD_MODE && session?.user) {
+      state.user = session.user;
+      const info = $("#setupAccountInfo");
+      if (info) {
+        info.textContent = session.user.email ? `Acesso para ${session.user.email}` : "Convite confirmado.";
+        info.classList.remove("hidden");
+      }
+      $("#setupPasswordBtn")?.removeAttribute("disabled");
+    }
+    if (!session && state.user && !completingPasswordSetup) location.reload();
   });
 
   window.AdvogaCore = {
