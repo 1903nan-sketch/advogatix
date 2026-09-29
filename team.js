@@ -6,6 +6,11 @@
   let bound = false;
 
   const $ = (s) => document.querySelector(s);
+  const publicAppOrigin = () => {
+    const host = location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return "https://advogatix.vercel.app";
+    return location.origin;
+  };
   const roleLabel = { owner: "Proprietário", lawyer: "Advogado(a)", staff: "Equipe / Assistente" };
 
   async function invoke(body) {
@@ -88,7 +93,7 @@
         email: $("#teamEmail").value.trim(),
         role: $("#teamRole").value,
         oab_number: $("#teamOab").value.trim(),
-        redirect_to: `${location.origin}${location.pathname}?setup=password`
+        redirect_to: `${publicAppOrigin()}/?setup=password`
       });
       core.toast("Convite enviado.");
       $("#teamDialog").close();
