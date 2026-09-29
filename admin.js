@@ -5,6 +5,11 @@
   let bound = false;
 
   const $ = (s) => document.querySelector(s);
+  const publicAppOrigin = () => {
+    const host = location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return "https://advogatix.vercel.app";
+    return location.origin;
+  };
   const money = (value) => value == null || value === "" ? "—" : Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const date = (value) => {
     if (!value) return "—";
@@ -132,7 +137,7 @@
       maintenance_due_at: $("#adminMaintenanceDue").value || null,
       maintenance_status: $("#adminMaintenanceStatus").value,
       notes: $("#adminNotes").value.trim(),
-      redirect_to: `${location.origin}${location.pathname}?setup=password`
+      redirect_to: `${publicAppOrigin()}/?setup=password`
     };
     try {
       await invoke(body);
