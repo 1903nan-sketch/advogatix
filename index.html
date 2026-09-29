@@ -13,7 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
-  <link rel="stylesheet" href="./styles.css?v=11" />
+  <link rel="stylesheet" href="./styles.css?v=12" />
 </head>
 <body>
   <div id="previewBanner" class="preview-banner hidden" role="status">
@@ -110,7 +110,6 @@
         <div class="brand"><div class="brand-mark"></div><span>AdvogaTix Master</span></div>
         <div class="top-actions">
           <span class="pill">Super Admin</span>
-          <a class="btn secondary" href="?mode=office#overview">Painel do escritório</a>
           <button id="adminLogoutBtn" class="btn secondary" type="button">Sair</button>
         </div>
       </header>
@@ -884,7 +883,12 @@
         <div class="full"><label for="adminNotes">Observações comerciais</label><textarea id="adminNotes" placeholder="Acordos, suporte, condições da venda..."></textarea></div>
       </div>
       <div id="adminPreviewNotice" class="notice hidden" style="margin-top:12px">No preview você pode consultar o painel, mas criação, bloqueio e alterações ficam desativados.</div>
-      <div class="modal-actions"><button class="btn secondary" type="button" data-admin-close>Cancelar</button><button id="adminFirmSaveBtn" class="btn">Salvar</button></div>
+      <div class="modal-actions admin-firm-actions">
+        <button id="adminFirmDeleteBtn" class="btn danger hidden" type="button">Apagar escritório</button>
+        <span class="admin-action-spacer"></span>
+        <button class="btn secondary" type="button" data-admin-close>Cancelar</button>
+        <button id="adminFirmSaveBtn" class="btn">Salvar</button>
+      </div>
       <div id="adminFirmFormStatus" class="status"></div>
     </form>
   </dialog>
@@ -1569,11 +1573,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=11"></script>
-  <script src="./team.js?v=11"></script>
-  <script src="./app.js?v=11"></script>
-  <script src="./organizer.js?v=11"></script>
-  <script src="./features.js?v=11"></script>
-  <script src="./deadline-calc.js?v=11"></script>
+  <script src="./admin.js?v=12"></script>
+  <script src="./team.js?v=12"></script>
+  <script src="./app.js?v=12"></script>
+  <script src="./organizer.js?v=12"></script>
+  <script src="./features.js?v=12"></script>
+  <script src="./deadline-calc.js?v=12"></script>
 </body>
 </html>

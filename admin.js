@@ -101,6 +101,12 @@
     $("#adminPreviewNotice").classList.toggle("hidden", !core.PREVIEW_READ_ONLY);
     $("#adminFirmSaveBtn").disabled = core.PREVIEW_READ_ONLY;
     $("#adminFirmSaveBtn").title = core.PREVIEW_READ_ONLY ? core.PREVIEW_MESSAGE : "";
+    const deleteBtn = $("#adminFirmDeleteBtn");
+    deleteBtn?.classList.toggle("hidden", !firm);
+    if (deleteBtn) {
+      deleteBtn.disabled = core.PREVIEW_READ_ONLY || !firm;
+      deleteBtn.title = core.PREVIEW_READ_ONLY ? core.PREVIEW_MESSAGE : "";
+    }
     $("#adminFirmDialog").showModal();
   }
 
@@ -140,6 +146,43 @@
     }
   }
 
+  async function deleteFirm() {
+    if (!editingId) return;
+    if (core.PREVIEW_READ_ONLY) return core.toast(core.PREVIEW_MESSAGE, "err");
+
+    const firm = firms.find((item) => item.id === editingId);
+    if (!firm) return core.toast("Escritório não encontrado.", "err");
+
+    const typed = window.prompt(
+      'Esta exclusão é permanente e apaga os dados do escritório.\n\nDigite exatamente o nome abaixo para confirmar:\n\n' + firm.name
+    );
+    if (typed === null) return;
+    if (typed.trim() !== firm.name) {
+      core.toast("Nome de confirmação incorreto. Nada foi apagado.", "err");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Apagar definitivamente "' + firm.name + '" e todos os dados vinculados? Esta ação não pode ser desfeita.'
+    );
+    if (!confirmed) return;
+
+    const button = $("#adminFirmDeleteBtn");
+    core.setBusy(button, true, "Apagando");
+    core.setStatus($("#adminFirmFormStatus"), "Apagando escritório e dados vinculados...");
+    try {
+      await invoke({ action: "delete", firm_id: firm.id, confirmation_name: typed.trim() });
+      $("#adminFirmDialog").close();
+      editingId = null;
+      core.toast("Escritório apagado definitivamente.");
+      await load();
+    } catch (error) {
+      core.setStatus($("#adminFirmFormStatus"), error.message || "Não foi possível apagar o escritório.", "err");
+    } finally {
+      core.setBusy(button, false);
+    }
+  }
+
   function bind() {
     if (bound) return;
     bound = true;
@@ -152,6 +195,7 @@
     $("#adminFirmSearch")?.addEventListener("input", render);
     $("#adminFirmStatusFilter")?.addEventListener("change", render);
     $("#adminFirmForm")?.addEventListener("submit", save);
+    $("#adminFirmDeleteBtn")?.addEventListener("click", deleteFirm);
     document.addEventListener("click", (event) => {
       const edit = event.target.closest?.("[data-admin-edit]");
       if (edit) {
