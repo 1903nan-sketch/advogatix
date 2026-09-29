@@ -52,3 +52,15 @@ A Edge Function está em:
 `supabase/functions/whatsapp/index.ts`
 
 A API Key da Evolution fica gravada em `whatsapp_settings`, tabela protegida por RLS e acessada pelo backend com credencial de servidor.
+
+
+## Deploy no Vercel
+
+Projeto de produção: `1903nan-sketch/advogatix`.
+
+URL pública esperada: `https://advogatix.vercel.app`.
+
+Após criar o projeto na Vercel, configure no Supabase Auth:
+
+- Site URL: `https://advogatix.vercel.app`
+- Redirect URL: `https://advogatix.vercel.app/?setup=password`
