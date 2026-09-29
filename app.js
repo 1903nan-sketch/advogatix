@@ -1,7 +1,57 @@
 (() => {
+  // Registrado antes de tudo para funcionar mesmo se o restante do script falhar.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
+  }
+
   const SUPABASE_URL = "https://llxquroiaehemebuikwg.supabase.co";
   const SUPABASE_KEY = "sb_publishable_JYxa0dZA0VkJEVuQUoXT5w_j0XamP_q";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Este preview usa o mesmo Supabase da produção. Enquanto não houver um banco
+  // separado para o preview, todas as gravações, uploads, exclusões e chamadas
+  // de Edge Functions (inclusive envio de WhatsApp) ficam bloqueadas aqui.
+  const PREVIEW_READ_ONLY = false;
+  const PREVIEW_MESSAGE = "Modo preview (somente leitura): nenhuma alteração é gravada nos dados reais.";
+  const TIME_ZONE = "America/Sao_Paulo";
+
+  // Histórico de atividades: a tabela "activity_logs" ainda não existe no Supabase.
+  // Ao criá-la (ver docs/supabase-pendencias.md), mude para true para gravar e ler os registros.
+  const ACTIVITY_LOG_ENABLED = false;
+
+  const rawSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = PREVIEW_READ_ONLY ? readOnlyClient(rawSupabase) : rawSupabase;
+
+  function blockedResult() {
+    const result = Promise.resolve({ data: null, error: new Error(PREVIEW_MESSAGE) });
+    const chain = new Proxy(function () {}, {
+      get(_target, prop) {
+        if (prop === "then") return result.then.bind(result);
+        if (prop === "catch") return result.catch.bind(result);
+        if (prop === "finally") return result.finally.bind(result);
+        return () => chain;
+      },
+    });
+    return chain;
+  }
+
+  function readOnlyClient(client) {
+    const tableWrites = new Set(["insert", "update", "upsert", "delete"]);
+    const storageWrites = new Set(["upload", "update", "remove", "move", "copy", "uploadToSignedUrl", "createSignedUploadUrl"]);
+    const guard = (target, blocked) => new Proxy(target, {
+      get(obj, prop) {
+        if (blocked.has(prop)) return () => blockedResult();
+        const value = obj[prop];
+        return typeof value === "function" ? value.bind(obj) : value;
+      },
+    });
+    return {
+      auth: client.auth,
+      from: (table) => guard(client.from(table), tableWrites),
+      rpc: () => blockedResult(),
+      storage: { from: (bucket) => guard(client.storage.from(bucket), storageWrites) },
+      functions: { invoke: async () => ({ data: null, error: new Error(PREVIEW_MESSAGE) }) },
+    };
+  }
 
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
@@ -10,14 +60,33 @@
     user: null,
     firm: null,
     role: null,
+    isPlatformAdmin: false,
+    accessControl: null,
     clients: [],
     cases: [],
     updates: [],
     notifications: [],
+    deadlines: [],
+    tasks: [],
+    calendarEvents: [],
+    financialEntries: [],
+    documents: [],
+    templates: [],
+    leads: [],
+    clientInteractions: [],
+    checklistItems: [],
+    activeClientFileId: null,
+    activeCaseWorkspaceId: null,
     pendingMovement: null,
     whatsapp: { configured: false, enabled: false, base_url: "", instance_name: "", api_key_masked: "" },
     editingClientId: null,
     editingCaseId: null,
+    editingDeadlineId: null,
+    editingTaskId: null,
+    editingEventId: null,
+    editingFinanceId: null,
+    editingLeadId: null,
+    editingTemplateId: null,
   };
 
   const statusLabels = {
@@ -65,7 +134,7 @@
     if (!value) return "—";
     try {
       return new Intl.DateTimeFormat("pt-BR", {
-        timeZone: "America/Sao_Paulo",
+        timeZone: TIME_ZONE,
         dateStyle: "short",
         timeStyle: "short",
       }).format(new Date(value));
@@ -74,15 +143,50 @@
     }
   }
 
+  // Datas e horas são sempre digitadas e exibidas no horário de Brasília,
+  // independentemente do fuso configurado no aparelho.
+  const zonedFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE, hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+
+  function zonedParts(date) {
+    const parts = {};
+    zonedFormatter.formatToParts(date).forEach((p) => { parts[p.type] = p.value; });
+    return parts;
+  }
+
+  function zoneOffsetMs(date) {
+    const p = zonedParts(date);
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(date.getTime() / 1000) * 1000;
+  }
+
   function toIso(value) {
-    return value ? new Date(value).toISOString() : null;
+    if (!value) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+    if (!m) {
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    const asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return new Date(asUtc - zoneOffsetMs(new Date(asUtc))).toISOString();
   }
 
   function toLocalInput(value) {
     if (!value) return "";
     const d = new Date(value);
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    if (Number.isNaN(d.getTime())) return "";
+    const p = zonedParts(d);
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  }
+
+  function dateKey(value) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const p = zonedParts(d);
+    return `${p.year}-${p.month}-${p.day}`;
   }
 
   function toast(message, type = "ok") {
@@ -122,6 +226,33 @@
     if (dialog?.open) dialog.close();
   }
 
+  // Campos que mudaram entre o registro atual e o payload salvo (para o histórico).
+  function changedFields(before, after) {
+    if (!before) return [];
+    const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    return Object.keys(after).filter((key) => !same(before[key], after[key]));
+  }
+
+  // Registra uma atividade importante. Nunca interrompe o fluxo principal:
+  // falhas (tabela ausente, permissão) só geram aviso no console.
+  async function logActivity(action, entityType, entityId, summary, metadata = {}) {
+    if (!ACTIVITY_LOG_ENABLED || PREVIEW_READ_ONLY || !state.firm || !state.user) return;
+    try {
+      const { error } = await supabase.from("activity_logs").insert({
+        firm_id: state.firm.id,
+        actor_id: state.user.id,
+        action,
+        entity_type: entityType,
+        entity_id: entityId || null,
+        summary: String(summary || "").slice(0, 300),
+        metadata,
+      });
+      if (error) console.warn("Histórico não registrado:", error.message);
+    } catch (error) {
+      console.warn("Histórico não registrado:", error);
+    }
+  }
+
   function badge(text, type = "") {
     return `<span class="badge ${type}">${esc(text)}</span>`;
   }
@@ -147,6 +278,7 @@
   }
 
   async function invokeWhatsapp(body) {
+    if (PREVIEW_READ_ONLY) throw new Error(PREVIEW_MESSAGE);
     const { data, error } = await supabase.functions.invoke("whatsapp", { body });
     if (!error) return data;
 
@@ -187,7 +319,7 @@
     } catch (error) {
       const message = String(error?.message || "");
       const friendly = /invalid login credentials/i.test(message)
-        ? "E-mail ou senha inválidos. Verifique se o usuário foi criado em Authentication > Users no Supabase."
+        ? "E-mail ou senha inválidos."
         : (message || "Não foi possível entrar.");
       setStatus($("#authStatus"), friendly, "err");
     } finally {
@@ -200,7 +332,7 @@
     location.reload();
   });
 
-  $("#firmForm").addEventListener("submit", async (event) => {
+  $("#firmForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.submitter;
     setBusy(button, true, "Criando");
@@ -235,14 +367,28 @@
     }
   });
 
-  function switchSection(section) {
+  const validSections = new Set(["overview","clients","cases","deadlines","agenda","tasks","finance","documents","templates","crm","reports","movements","messages","activity","settings"]);
+
+  function switchSection(section, options = {}) {
+    if (!validSections.has(section)) section = "overview";
     $$(".nav button").forEach((btn) => btn.classList.toggle("active", btn.dataset.section === section));
     $$(".section").forEach((el) => el.classList.toggle("show", el.id === `section-${section}`));
+    const activeButton = $(`.nav button[data-section="${section}"]`);
+    activeButton?.scrollIntoView({ block: "nearest", inline: "center", behavior: options.instant ? "auto" : "smooth" });
+    window.scrollTo({ top: 0, behavior: options.instant ? "auto" : "smooth" });
+    if (options.updateHash !== false && location.hash !== `#${section}`) {
+      history.pushState({ section }, "", `#${section}`);
+    }
     if (section === "settings") loadWhatsappStatus();
   }
 
   $$(".nav button").forEach((btn) => {
     btn.addEventListener("click", () => switchSection(btn.dataset.section));
+  });
+
+  window.addEventListener("popstate", () => {
+    const section = location.hash.replace(/^#/, "");
+    switchSection(validSections.has(section) ? section : "overview", { updateHash: false, instant: true });
   });
 
   $$("[data-close]").forEach((btn) => {
@@ -256,7 +402,7 @@
   $("#newCaseBtn").addEventListener("click", () => openCaseDialog());
   $("#newMovementBtn").addEventListener("click", () => openMovementDialog());
 
-  function openClientDialog(clientId = null) {
+  function openClientDialog(clientId = null, prefill = null) {
     state.editingClientId = clientId;
     $("#clientForm").reset();
     setStatus($("#clientStatus"));
@@ -270,10 +416,31 @@
       $("#cEmail").value = client.email || "";
       $("#cPhone").value = client.phone || "";
       $("#cReferred").value = client.referred_by || "";
+      $("#cCpfCnpj").value = client.cpf_cnpj || "";
+      $("#cRg").value = client.rg || "";
+      $("#cBirth").value = client.birth_date || "";
+      $("#cProfession").value = client.profession || "";
+      $("#cMarital").value = client.marital_status || "";
+      $("#cPostalCode").value = client.postal_code || "";
+      $("#cAddress").value = client.address_line || "";
+      $("#cCity").value = client.city || "";
+      $("#cStateCode").value = client.state_code || "";
+      $("#cTags").value = Array.isArray(client.tags) ? client.tags.join(", ") : "";
+      $("#cFavorite").value = client.is_favorite ? "true" : "false";
+      $("#cBankName").value = client.bank_name || "";
+      $("#cBankBranch").value = client.bank_branch || "";
+      $("#cBankAccount").value = client.bank_account || "";
+      $("#cPixKey").value = client.pix_key || "";
       $("#cNotes").value = client.notes || "";
       $("#cStatus").value = client.status || "active";
     } else {
       $("#cStatus").value = "active";
+      if (prefill) {
+        $("#cName").value = prefill.full_name || "";
+        $("#cPhone").value = prefill.phone || "";
+        $("#cEmail").value = prefill.email || "";
+        $("#cNotes").value = prefill.notes || "";
+      }
     }
     openDialog("clientDialog");
   }
@@ -288,6 +455,21 @@
       email: $("#cEmail").value.trim() || null,
       phone: $("#cPhone").value.trim() || null,
       referred_by: $("#cReferred").value.trim() || null,
+      cpf_cnpj: $("#cCpfCnpj").value.trim() || null,
+      rg: $("#cRg").value.trim() || null,
+      birth_date: $("#cBirth").value || null,
+      profession: $("#cProfession").value.trim() || null,
+      marital_status: $("#cMarital").value.trim() || null,
+      postal_code: $("#cPostalCode").value.trim() || null,
+      address_line: $("#cAddress").value.trim() || null,
+      city: $("#cCity").value.trim() || null,
+      state_code: $("#cStateCode").value.trim().toUpperCase() || null,
+      tags: $("#cTags").value.split(",").map((x) => x.trim()).filter(Boolean),
+      is_favorite: $("#cFavorite").value === "true",
+      bank_name: $("#cBankName").value.trim() || null,
+      bank_branch: $("#cBankBranch").value.trim() || null,
+      bank_account: $("#cBankAccount").value.trim() || null,
+      pix_key: $("#cPixKey").value.trim() || null,
       notes: $("#cNotes").value.trim() || null,
       status: $("#cStatus").value,
       portal_enabled: false,
@@ -295,6 +477,7 @@
 
     try {
       if (state.editingClientId) {
+        const before = clientById(state.editingClientId);
         const { error } = await supabase
           .from("clients")
           .update(payload)
@@ -302,14 +485,16 @@
           .eq("firm_id", state.firm.id);
         if (error) throw error;
         toast("Cliente atualizado.");
+        logActivity("client.updated", "client", state.editingClientId, "Cliente editado: " + payload.full_name, { fields: changedFields(before, payload) });
       } else {
-        const { error } = await supabase.from("clients").insert({
+        const { data: created, error } = await supabase.from("clients").insert({
           ...payload,
           firm_id: state.firm.id,
           created_by: state.user.id,
-        });
+        }).select("id").single();
         if (error) throw error;
         toast("Cliente cadastrado.");
+        logActivity("client.created", "client", created?.id, "Cliente criado: " + payload.full_name);
       }
       closeDialog("clientDialog");
       await loadData();
@@ -323,7 +508,7 @@
   function fillClientSelect(selected = "") {
     $("#caseClient").innerHTML = state.clients
       .filter((c) => c.status === "active" || c.id === selected)
-      .map((c) => `<option value="${c.id}" ${c.id === selected ? "selected" : ""}>${esc(c.full_name)}</option>`)
+      .map((c) => `<option value="${esc(c.id)}" ${c.id === selected ? "selected" : ""}>${esc(c.full_name)}</option>`)
       .join("");
   }
 
@@ -352,12 +537,19 @@
       $("#caseDivision").value = item.court_division || "";
       $("#caseCourt").value = item.court || "";
       $("#caseType").value = item.case_type || "";
+      $("#caseLegalArea").value = item.legal_area || "";
+      $("#caseValue").value = item.case_value ?? "";
+      $("#casePriority").value = item.priority || "normal";
+      $("#caseTags").value = Array.isArray(item.tags) ? item.tags.join(", ") : "";
+      $("#caseFavorite").value = item.is_favorite ? "true" : "false";
       $("#caseHearing").value = toLocalInput(item.hearing_at);
       $("#caseHearingMode").value = item.hearing_mode || "";
       $("#caseStatus").value = item.status || "in_progress";
       $("#caseSummary").value = item.client_summary || "";
     } else {
       $("#caseStatus").value = "in_progress";
+      $("#casePriority").value = "normal";
+      $("#caseFavorite").value = "false";
     }
 
     openDialog("caseDialog");
@@ -378,6 +570,11 @@
       court_division: $("#caseDivision").value.trim() || null,
       court: $("#caseCourt").value.trim() || null,
       case_type: $("#caseType").value.trim() || null,
+      legal_area: $("#caseLegalArea").value.trim() || null,
+      case_value: $("#caseValue").value ? Number($("#caseValue").value) : null,
+      priority: $("#casePriority").value || "normal",
+      tags: $("#caseTags").value.split(",").map((x) => x.trim()).filter(Boolean),
+      is_favorite: $("#caseFavorite").value === "true",
       hearing_at: toIso($("#caseHearing").value),
       hearing_mode: $("#caseHearingMode").value || null,
       status: $("#caseStatus").value,
@@ -386,6 +583,7 @@
 
     try {
       if (state.editingCaseId) {
+        const before = caseById(state.editingCaseId);
         const { error } = await supabase
           .from("cases")
           .update(payload)
@@ -393,14 +591,19 @@
           .eq("firm_id", state.firm.id);
         if (error) throw error;
         toast("Processo atualizado.");
+        logActivity("case.updated", "case", state.editingCaseId, "Processo editado: " + payload.title, {
+          case_id: state.editingCaseId, fields: changedFields(before, payload),
+          status_from: before?.status, status_to: payload.status,
+        });
       } else {
-        const { error } = await supabase.from("cases").insert({
+        const { data: created, error } = await supabase.from("cases").insert({
           ...payload,
           firm_id: state.firm.id,
           created_by: state.user.id,
-        });
+        }).select("id").single();
         if (error) throw error;
         toast("Processo cadastrado.");
+        logActivity("case.created", "case", created?.id, "Processo criado: " + payload.title, { case_id: created?.id });
       }
       closeDialog("caseDialog");
       await loadData();
@@ -417,7 +620,7 @@
       .map((c) => {
         const client = clientById(c.client_id);
         const number = c.process_number ? ` — ${c.process_number}` : "";
-        return `<option value="${c.id}" ${c.id === selected ? "selected" : ""}>${esc(client?.full_name || "Cliente")} — ${esc(c.title)}${esc(number)}</option>`;
+        return `<option value="${esc(c.id)}" ${c.id === selected ? "selected" : ""}>${esc(client?.full_name || "Cliente")} — ${esc(c.title)}${esc(number)}</option>`;
       })
       .join("");
   }
@@ -569,10 +772,11 @@
     const button = event.submitter;
     setBusy(button, true, "Salvando");
     try {
-      const { error } = await supabase.from("case_updates").insert(data);
+      const { data: created, error } = await supabase.from("case_updates").insert(data).select("id").single();
       if (error) throw error;
       closeDialog("movementDialog");
       toast("Movimentação salva sem enviar mensagem.");
+      logActivity("movement.created", "movement", created?.id, "Movimentação registrada: " + data.title, { case_id: data.case_id });
       await loadData();
     } catch (error) {
       setStatus($("#movementStatus"), error.message || "Não foi possível salvar a movimentação.", "err");
@@ -601,6 +805,7 @@
         .select("*")
         .single();
       if (error) throw error;
+      logActivity("movement.created", "movement", created.id, "Movimentação registrada e enviada: " + data.title, { case_id: data.case_id });
 
       try {
         await invokeWhatsapp({
@@ -673,6 +878,16 @@
     const box = $("#integrationState");
     const text = $("#integrationStateText");
     const info = $("#waConnectedInfo");
+
+    if (PREVIEW_READ_ONLY) {
+      box.classList.remove("connected");
+      text.textContent = "Integração desativada no preview";
+      info.classList.add("hidden");
+      $("#waConnectBtn").disabled = true;
+      $("#waRefreshBtn").disabled = true;
+      setStatus($("#waStatus"), "O preview não consulta nem envia mensagens de WhatsApp.");
+      return;
+    }
 
     try {
       const data = await invokeWhatsapp({ action: "status", firm_id: state.firm.id });
@@ -780,19 +995,32 @@
         }).join("")
       : '<div class="empty">Nenhuma movimentação cadastrada.</div>';
 
-    const nextHearings = state.cases
-      .filter((c) => c.hearing_at && new Date(c.hearing_at) >= new Date())
-      .sort((a, b) => new Date(a.hearing_at) - new Date(b.hearing_at))
-      .slice(0, 5);
+    // Audiências vêm tanto da ficha do processo quanto da agenda jurídica.
+    const now = Date.now();
+    const hearings = [];
+    const seen = new Set();
+    const addHearing = (caseId, clientId, at, mode, title) => {
+      if (!at || new Date(at).getTime() < now) return;
+      const key = (caseId || title) + "|" + new Date(at).getTime();
+      if (seen.has(key)) return;
+      seen.add(key);
+      hearings.push({ caseId, clientId, at, mode, title });
+    };
+    state.cases.forEach((c) => addHearing(c.id, c.client_id, c.hearing_at, c.hearing_mode, c.title));
+    (state.calendarEvents || [])
+      .filter((e) => e.event_type === "hearing")
+      .forEach((e) => addHearing(e.case_id, e.client_id || caseById(e.case_id)?.client_id, e.start_at, e.modality, e.title));
+    const nextHearings = hearings.sort((a, b) => new Date(a.at) - new Date(b.at)).slice(0, 5);
 
     $("#nextHearings").innerHTML = nextHearings.length
-      ? nextHearings.map((c) => {
-          const client = clientById(c.client_id);
+      ? nextHearings.map((h) => {
+          const item = caseById(h.caseId);
+          const client = clientById(h.clientId);
           return `
             <div class="event">
-              <strong>${esc(client?.full_name || c.title)}</strong>
-              <small>${brDate(c.hearing_at)} • ${esc(modeLabels[c.hearing_mode] || "Modalidade não informada")}</small>
-              <p>${esc(c.process_number || c.title)}</p>
+              <strong>${esc(client?.full_name || h.title)}</strong>
+              <small>${brDate(h.at)} • ${esc(modeLabels[h.mode] || "Modalidade não informada")}</small>
+              <p>${esc(item?.process_number || item?.title || h.title)}</p>
             </div>`;
         }).join("")
       : '<div class="empty">Nenhuma audiência futura cadastrada.</div>';
@@ -803,7 +1031,7 @@
     const status = $("#clientFilter").value;
     const list = state.clients.filter((c) => {
       const matchesStatus = status === "all" || c.status === status;
-      const haystack = norm(`${c.full_name} ${c.email} ${c.phone} ${c.referred_by}`);
+      const haystack = norm(`${c.full_name} ${c.email} ${c.phone} ${c.referred_by} ${c.cpf_cnpj} ${c.city} ${(c.tags || []).join(" ")}`);
       return matchesStatus && haystack.includes(query);
     });
 
@@ -811,22 +1039,19 @@
     $("#clientsBody").innerHTML = list.length
       ? list.map((c) => `
           <tr>
-            <td><strong>${esc(c.full_name)}</strong><div class="small">${esc(c.notes || "")}</div></td>
+            <td><strong>${c.is_favorite ? "★ " : ""}${esc(c.full_name)}</strong><div class="small">${esc(c.cpf_cnpj || (c.tags || []).join(" • ") || c.notes || "")}</div></td>
             <td>${esc(c.phone || "—")}</td>
             <td>${esc(c.email || "—")}</td>
             <td>${esc(c.referred_by || "—")}</td>
             <td>${badge(c.status === "active" ? "Ativo" : "Inativo", c.status === "active" ? "ok" : "")}</td>
             <td>
               <div class="row-actions">
-                <button class="btn secondary sm" data-edit-client="${c.id}">Editar</button>
+                <button class="btn ghost sm" data-client-file="${esc(c.id)}">Ficha</button>
+                <button class="btn secondary sm" data-edit-client="${esc(c.id)}">Editar</button>
               </div>
             </td>
           </tr>`).join("")
       : '<tr><td colspan="6" class="empty">Nenhum cliente encontrado.</td></tr>';
-
-    $$("[data-edit-client]").forEach((btn) => {
-      btn.addEventListener("click", () => openClientDialog(btn.dataset.editClient));
-    });
   }
 
   function renderCases() {
@@ -835,7 +1060,7 @@
     const list = state.cases.filter((c) => {
       const client = clientById(c.client_id);
       const matchesStatus = status === "all" || c.status === status;
-      const haystack = norm(`${c.title} ${c.process_number} ${c.claimant} ${c.defendant} ${c.forum} ${c.court_division} ${client?.full_name}`);
+      const haystack = norm(`${c.title} ${c.process_number} ${c.claimant} ${c.defendant} ${c.forum} ${c.court_division} ${c.legal_area} ${(c.tags || []).join(" ")} ${client?.full_name}`);
       return matchesStatus && haystack.includes(query);
     });
 
@@ -847,27 +1072,23 @@
           const statusType = c.status === "in_progress" ? "ok" : ["closed", "archived"].includes(c.status) ? "" : "warn";
           return `
             <tr>
-              <td><strong>${esc(c.title)}</strong><div class="small">${esc(c.process_number || "Sem número")}</div></td>
+              <td><strong>${c.is_favorite ? "★ " : ""}${esc(c.title)}</strong><div class="small">${esc(c.process_number || "Sem número")}</div></td>
               <td>${esc(client?.full_name || "—")}</td>
               <td><div>${esc(parties || "—")}</div><div class="small">${esc([c.forum, c.court_division].filter(Boolean).join(" • "))}</div></td>
               <td>${c.hearing_at ? `<strong>${brDate(c.hearing_at)}</strong><div class="small">${esc(modeLabels[c.hearing_mode] || "")}</div>` : "—"}</td>
-              <td>${badge(statusLabels[c.status] || c.status, statusType)}</td>
+              <td>${badge(statusLabels[c.status] || c.status, statusType)}<div class="small" data-case-health="${esc(c.id)}"></div></td>
               <td>
                 <div class="row-actions">
-                  <button class="btn ghost sm" data-move-case="${c.id}">Movimentar</button>
-                  <button class="btn secondary sm" data-edit-case="${c.id}">Editar</button>
+                  <button class="btn ghost sm" data-case-workspace="${esc(c.id)}">Organizar</button>
+                  <button class="btn ghost sm" data-move-case="${esc(c.id)}">Movimentar</button>
+                  <button class="btn secondary sm" data-edit-case="${esc(c.id)}">Editar</button>
                 </div>
               </td>
             </tr>`;
         }).join("")
       : '<tr><td colspan="6" class="empty">Nenhum processo encontrado.</td></tr>';
 
-    $$("[data-edit-case]").forEach((btn) => {
-      btn.addEventListener("click", () => openCaseDialog(btn.dataset.editCase));
-    });
-    $$("[data-move-case]").forEach((btn) => {
-      btn.addEventListener("click", () => openMovementDialog(btn.dataset.moveCase));
-    });
+    window.AdvogaOrganizer?.renderCaseHealthBadges?.();
   }
 
   function renderUpdates() {
@@ -951,15 +1172,22 @@
               <td>${badge(statusText, statusType)}</td>
               <td class="message-cell"><div class="message-preview" title="${esc(n.message_body || n.error_message || "")}">${esc(n.message_body || n.error_message || "—")}</div></td>
               <td>${esc(n.provider_message_id || "—")}</td>
-              <td>${canRetry ? `<button class="btn secondary sm" data-retry-update="${n.case_update_id}">Reenviar</button>` : ""}</td>
+              <td>${canRetry ? `<button class="btn secondary sm" data-retry-update="${esc(n.case_update_id)}">Reenviar</button>` : ""}</td>
             </tr>`;
         }).join("")
       : '<tr><td colspan="6" class="empty">Nenhuma mensagem enviada ainda.</td></tr>';
-
-    $("[data-retry-update]").forEach((button) => {
-      button.addEventListener("click", () => retryWhatsapp(button.dataset.retryUpdate, button));
-    });
   }
+
+  // Um único listener para os botões das tabelas: continua funcionando depois
+  // que as linhas são recriadas por busca ou filtro.
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest?.("[data-edit-client],[data-edit-case],[data-move-case],[data-retry-update]");
+    if (!button) return;
+    if (button.dataset.editClient) openClientDialog(button.dataset.editClient);
+    else if (button.dataset.editCase) openCaseDialog(button.dataset.editCase);
+    else if (button.dataset.moveCase) openMovementDialog(button.dataset.moveCase);
+    else if (button.dataset.retryUpdate) retryWhatsapp(button.dataset.retryUpdate, button);
+  });
 
   function renderAll() {
     updateBrand();
@@ -970,6 +1198,7 @@
     renderMessages();
     fillClientSelect();
     fillCaseSelect();
+    window.AdvogaOrganizer?.renderAll?.();
   }
 
   ["clientSearch", "clientFilter"].forEach((id) => {
@@ -1005,6 +1234,9 @@
     state.cases = casesResult.data || [];
     state.updates = updatesResult.data || [];
     state.notifications = notificationsResult.data || [];
+    if (window.AdvogaOrganizer?.loadData) {
+      await window.AdvogaOrganizer.loadData(firmId);
+    }
     renderAll();
   }
 
@@ -1012,14 +1244,34 @@
     const { data: { user } } = await supabase.auth.getUser();
     state.user = user || null;
 
+    $("#adminApp")?.classList.add("hidden");
+    $("#blockedArea")?.classList.add("hidden");
+
     if (!user) {
       $("#landing").classList.remove("hidden");
       $("#app").classList.add("hidden");
       return;
     }
 
+    const { data: platformAdmin } = await supabase
+      .from("platform_admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    state.isPlatformAdmin = Boolean(platformAdmin);
+    const requestedMode = new URLSearchParams(location.search).get("mode");
+    if (state.isPlatformAdmin && requestedMode !== "office") {
+      $("#landing").classList.add("hidden");
+      $("#app").classList.add("hidden");
+      $("#adminApp")?.classList.remove("hidden");
+      window.AdvogaAdmin?.boot(window.AdvogaCore);
+      return;
+    }
+
     $("#landing").classList.add("hidden");
     $("#app").classList.remove("hidden");
+    $("#masterAccessBtn")?.classList.toggle("hidden", !state.isPlatformAdmin);
     $("#lawyerArea").classList.add("hidden");
     $("#onboardingArea").classList.add("hidden");
 
@@ -1045,14 +1297,116 @@
     const membership = memberships[0];
     state.firm = membership.law_firms;
     state.role = membership.role;
+
+    const { data: accessControl, error: accessError } = await supabase
+      .from("firm_access_controls")
+      .select("access_status,user_limit")
+      .eq("firm_id", membership.firm_id)
+      .maybeSingle();
+
+    if (accessError) {
+      toast(accessError.message || "Não foi possível validar o acesso do escritório.", "err");
+      return;
+    }
+
+    state.accessControl = accessControl || { access_status: "active", user_limit: 5 };
+    if (state.accessControl.access_status !== "active") {
+      $("#lawyerArea").classList.add("hidden");
+      $("#blockedArea")?.classList.remove("hidden");
+      const blockedText = $("#blockedFirmText");
+      if (blockedText) blockedText.textContent = `${state.firm?.name || "Este escritório"} está com o acesso ${state.accessControl.access_status === "ended" ? "encerrado" : "bloqueado"}.`;
+      $("#userLabel").textContent = user.email || "Conectado";
+      return;
+    }
+
+    const roleLabel = { owner: "Proprietário", lawyer: "Advogado", staff: "Equipe" }[state.role] || state.role || "Perfil não informado";
+    const accessSummary = $("#currentAccessSummary");
+    if (accessSummary) accessSummary.textContent = `${user.email || "Usuário conectado"} • ${roleLabel} • ${state.firm?.name || "Escritório"}`;
     $("#lawyerArea").classList.remove("hidden");
     await loadData();
+    const requestedSection = location.hash.replace(/^#/, "");
+    switchSection(validSections.has(requestedSection) ? requestedSection : "overview", { updateHash: false, instant: true });
     loadWhatsappStatus();
+    window.AdvogaTeam?.boot(window.AdvogaCore);
   }
 
   supabase.auth.onAuthStateChange((_event, session) => {
     if (!session && state.user) location.reload();
   });
+
+  window.AdvogaCore = {
+    supabase,
+    rawSupabase,
+    state,
+    $,
+    $$,
+    esc,
+    norm,
+    brDate,
+    toIso,
+    toLocalInput,
+    dateKey,
+    TIME_ZONE,
+    PREVIEW_READ_ONLY,
+    ACTIVITY_LOG_ENABLED,
+    logActivity,
+    changedFields,
+    PREVIEW_MESSAGE,
+    toast,
+    setStatus,
+    setBusy,
+    openDialog,
+    closeDialog,
+    badge,
+    clientById,
+    caseById,
+    switchSection,
+    openClientDialog,
+    loadData,
+    renderAll,
+  };
+
+  // No celular as tabelas viram cartões; cada célula recebe o nome da coluna.
+  function labelTableRows(table) {
+    const headers = $$("thead th", table).map((th) => th.textContent.trim());
+    $$("tbody tr", table).forEach((tr) => {
+      Array.from(tr.children).forEach((td, index) => {
+        if (td.hasAttribute("colspan")) return;
+        if (headers[index]) td.dataset.label = headers[index];
+        else td.classList.add("cell-actions");
+      });
+    });
+  }
+
+  $$("table").forEach((table) => {
+    const body = $("tbody", table);
+    if (!body) return;
+    new MutationObserver(() => labelTableRows(table)).observe(body, { childList: true });
+  });
+
+  if (PREVIEW_READ_ONLY) {
+    document.body.classList.add("preview-mode");
+    $("#previewBanner")?.classList.remove("hidden");
+    const writeButtonIds = [
+      "clientSaveBtn","caseSaveBtn","movementSaveBtn","confirmSendBtn","deadlineSaveBtn",
+      "taskSaveBtn","eventSaveBtn","financeSaveBtn","documentUploadBtn","templateSaveBtn",
+      "leadSaveBtn","interactionSaveBtn","checklistSaveBtn","genSaveBtn"
+    ];
+    writeButtonIds.forEach((id) => {
+      const button = $("#" + id);
+      if (!button) return;
+      button.disabled = true;
+      button.title = PREVIEW_MESSAGE;
+    });
+    $("#documentFile")?.setAttribute("disabled", "");
+    document.addEventListener("click", (event) => {
+      const mutation = event.target.closest?.("[data-retry-update],[data-complete-deadline],[data-complete-task],[data-convert-lead],[data-delete-document],[data-toggle-checklist],[data-delete-template],[data-gen-save]");
+      if (!mutation) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      toast(PREVIEW_MESSAGE, "err");
+    }, true);
+  }
 
   boot().catch((error) => {
     console.error(error);
