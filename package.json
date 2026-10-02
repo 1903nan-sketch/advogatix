@@ -1,0 +1,7 @@
+{
+  "name": "advogatix",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/smoke.test.mjs"
+  }
+}

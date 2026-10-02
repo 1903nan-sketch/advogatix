@@ -13,7 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
-  <link rel="stylesheet" href="./styles.css?v=13" />
+  <link rel="stylesheet" href="./styles.css?v=14" />
 </head>
 <body>
   <div id="previewBanner" class="preview-banner hidden" role="status">
@@ -130,7 +130,7 @@
 
         <div class="toolbar admin-toolbar">
           <div class="filters">
-            <div class="search"><input id="adminFirmSearch" type="search" placeholder="Buscar escritório ou proprietário" /></div>
+            <div class="search"><input id="adminFirmSearch" type="search" aria-label="Buscar escritório ou proprietário" placeholder="Buscar escritório ou proprietário" /></div>
             <select id="adminFirmStatusFilter" aria-label="Filtrar escritório por acesso">
               <option value="all">Todos</option>
               <option value="active">Ativos</option>
@@ -159,7 +159,7 @@
         <div class="brand"><div class="brand-mark"></div><span>AdvogaTix</span></div>
         <div class="top-actions">
           <div class="global-search-box">
-            <input id="globalSearch" type="search" placeholder="Buscar em todo o escritório..." autocomplete="off" />
+            <input id="globalSearch" type="search" aria-label="Buscar em todo o escritório" placeholder="Buscar em todo o escritório..." autocomplete="off" />
             <div id="globalSearchResults" class="global-search-results hidden"></div>
           </div>
           <span id="roleLabel" class="pill">Equipe</span>
@@ -330,7 +330,7 @@
             <div class="toolbar">
               <div class="filters">
                 <div class="search">
-                  <input id="clientSearch" type="search" placeholder="Buscar cliente, telefone ou indicação" />
+                  <input id="clientSearch" type="search" aria-label="Buscar cliente, telefone ou indicação" placeholder="Buscar cliente, telefone ou indicação" />
                 </div>
                 <select id="clientFilter" aria-label="Filtrar clientes por status">
                   <option value="all">Todos os status</option>
@@ -372,7 +372,7 @@
             <div class="toolbar">
               <div class="filters">
                 <div class="search">
-                  <input id="caseSearch" type="search" placeholder="Buscar processo, cliente, reclamante ou fórum" />
+                  <input id="caseSearch" type="search" aria-label="Buscar processo, cliente, reclamante ou fórum" placeholder="Buscar processo, cliente, reclamante ou fórum" />
                 </div>
                 <select id="caseFilter" aria-label="Filtrar processos por status">
                   <option value="all">Todos os status</option>
@@ -419,7 +419,7 @@
             <div id="deadlineBuckets" class="bucket-grid" aria-label="Resumo dos prazos por vencimento"></div>
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="deadlineSearch" type="search" placeholder="Buscar prazo, cliente ou processo" /></div>
+                <div class="search"><input id="deadlineSearch" type="search" aria-label="Buscar prazo, cliente ou processo" placeholder="Buscar prazo, cliente ou processo" /></div>
                 <select id="deadlineFilter" aria-label="Filtrar prazos por vencimento">
                   <option value="open">Todos os abertos</option>
                   <option value="overdue">Vencidos</option>
@@ -484,7 +484,7 @@
             </div>
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="taskSearch" type="search" placeholder="Buscar tarefa, cliente ou processo" /></div>
+                <div class="search"><input id="taskSearch" type="search" aria-label="Buscar tarefa, cliente ou processo" placeholder="Buscar tarefa, cliente ou processo" /></div>
                 <select id="taskFilter" aria-label="Filtrar tarefas">
                   <option value="open">Abertas</option>
                   <option value="overdue">Atrasadas</option>
@@ -521,7 +521,7 @@
             </div>
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="financeSearch" type="search" placeholder="Buscar lançamento ou cliente" /></div>
+                <div class="search"><input id="financeSearch" type="search" aria-label="Buscar lançamento ou cliente" placeholder="Buscar lançamento ou cliente" /></div>
                 <select id="financeFilter" aria-label="Filtrar lançamentos financeiros">
                   <option value="all">Todos</option>
                   <option value="pending">Pendentes</option>
@@ -553,7 +553,7 @@
 
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="documentSearch" type="search" placeholder="Buscar documento, cliente ou processo" /></div>
+                <div class="search"><input id="documentSearch" type="search" aria-label="Buscar documento, cliente ou processo" placeholder="Buscar documento, cliente ou processo" /></div>
                 <select id="documentTypeFilter" aria-label="Filtrar documentos por tipo">
                   <option value="all">Todos os tipos</option>
                   <option value="procuração">Procuração</option>
@@ -593,7 +593,7 @@
 
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="templateSearch" type="search" placeholder="Buscar modelo ou categoria" /></div>
+                <div class="search"><input id="templateSearch" type="search" aria-label="Buscar modelo ou categoria" placeholder="Buscar modelo ou categoria" /></div>
                 <select id="templateFilter" aria-label="Filtrar modelos por tipo">
                   <option value="all">Todos</option>
                   <option value="whatsapp">WhatsApp</option>
@@ -624,7 +624,7 @@
             </div>
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="leadSearch" type="search" placeholder="Buscar nome, telefone ou origem" /></div>
+                <div class="search"><input id="leadSearch" type="search" aria-label="Buscar nome, telefone ou origem" placeholder="Buscar nome, telefone ou origem" /></div>
                 <select id="leadFilter" aria-label="Filtrar interessados por estágio">
                   <option value="all">Todos os estágios</option>
                   <option value="lead">Interessado</option>
@@ -648,7 +648,7 @@
             <div class="card panel" style="margin-top:12px">
               <h3>Busca de conflito de interesses</h3>
               <p class="muted">Pesquise nomes de pessoas ou empresas antes de aceitar um novo caso.</p>
-              <div class="search" style="margin-top:10px"><input id="conflictSearch" type="search" placeholder="Nome da pessoa, empresa ou parte adversa" /></div>
+              <div class="search" style="margin-top:10px"><input id="conflictSearch" type="search" aria-label="Buscar conflito de interesses" placeholder="Nome da pessoa, empresa ou parte adversa" /></div>
               <div id="conflictResults" class="timeline" style="margin-top:12px"></div>
             </div>
           </section>
@@ -695,7 +695,7 @@
             <div class="toolbar">
               <div class="filters">
                 <div class="search">
-                  <input id="movementSearch" type="search" placeholder="Buscar movimentação ou processo" />
+                  <input id="movementSearch" type="search" aria-label="Buscar movimentação ou processo" placeholder="Buscar movimentação ou processo" />
                 </div>
                 <select id="movementFilter" aria-label="Filtrar movimentações por tipo">
                   <option value="all">Todos os tipos</option>
@@ -752,7 +752,7 @@
             <div id="activityNotice" class="notice hidden" style="margin-bottom:12px"></div>
             <div class="toolbar">
               <div class="filters">
-                <div class="search"><input id="activitySearch" type="search" placeholder="Buscar atividade, cliente ou processo" /></div>
+                <div class="search"><input id="activitySearch" type="search" aria-label="Buscar atividade, cliente ou processo" placeholder="Buscar atividade, cliente ou processo" /></div>
                 <select id="activityType" aria-label="Filtrar atividades por tipo">
                   <option value="all">Todos os tipos</option>
                   <option value="client">Clientes</option>
@@ -861,7 +861,7 @@
     </div>
   </div>
 
-  <dialog id="adminFirmDialog" class="wide">
+  <dialog id="adminFirmDialog" class="wide" aria-labelledby="adminFirmDialogTitle">
     <form id="adminFirmForm" class="modal">
       <div class="modal-head">
         <div><h3 id="adminFirmDialogTitle">Novo escritório</h3><p>Venda e manutenção são controladas manualmente.</p></div>
@@ -893,10 +893,10 @@
     </form>
   </dialog>
 
-  <dialog id="teamDialog">
+  <dialog id="teamDialog" aria-labelledby="teamDialogTitle">
     <form id="teamForm" class="modal">
       <div class="modal-head">
-        <div><h3>Adicionar membro</h3><p>O usuário receberá um convite para criar a própria senha.</p></div>
+        <div><h3 id="teamDialogTitle">Adicionar membro</h3><p>O usuário receberá um convite para criar a própria senha.</p></div>
         <button class="btn ghost close-x" type="button" data-team-close>×</button>
       </div>
       <div class="modal-grid">
@@ -910,7 +910,7 @@
       <div id="teamFormStatus" class="status"></div>
     </form>
   </dialog>
-  <dialog id="clientDialog">
+  <dialog id="clientDialog" aria-labelledby="clientDialogTitle">
     <form id="clientForm" class="modal">
       <div class="modal-head">
         <div>
@@ -1030,7 +1030,7 @@
     </form>
   </dialog>
 
-  <dialog id="caseDialog">
+  <dialog id="caseDialog" aria-labelledby="caseDialogTitle">
     <form id="caseForm" class="modal">
       <div class="modal-head">
         <div>
@@ -1145,7 +1145,7 @@
 
 
 
-  <dialog id="templateDialog">
+  <dialog id="templateDialog" aria-labelledby="templateDialogTitle">
     <form id="templateForm" class="modal">
       <div class="modal-head">
         <div><h3 id="templateDialogTitle">Novo modelo</h3><p>Crie textos reutilizáveis pelo escritório.</p></div>
@@ -1168,10 +1168,10 @@
     </form>
   </dialog>
 
-  <dialog id="documentDialog">
+  <dialog id="documentDialog" aria-labelledby="documentDialogTitle">
     <form id="documentForm" class="modal">
       <div class="modal-head">
-        <div><h3>Enviar documento</h3><p>O arquivo ficará no armazenamento privado do escritório.</p></div>
+        <div><h3 id="documentDialogTitle">Enviar documento</h3><p>O arquivo ficará no armazenamento privado do escritório.</p></div>
         <button class="btn ghost close-x" type="button" data-close>×</button>
       </div>
       <div class="modal-grid">
@@ -1186,7 +1186,7 @@
     </form>
   </dialog>
 
-  <dialog id="clientFileDialog">
+  <dialog id="clientFileDialog" aria-labelledby="clientFileTitle">
     <div class="modal">
       <div class="modal-head">
         <div>
@@ -1237,7 +1237,7 @@
     </div>
   </dialog>
 
-  <dialog id="caseWorkspaceDialog" class="wide">
+  <dialog id="caseWorkspaceDialog" class="wide" aria-labelledby="caseWorkspaceTitle">
     <div class="modal">
       <div class="modal-head">
         <div>
@@ -1285,7 +1285,7 @@
     </div>
   </dialog>
 
-  <dialog id="deadlineDialog">
+  <dialog id="deadlineDialog" aria-labelledby="deadlineDialogTitle">
     <form id="deadlineForm" class="modal">
       <div class="modal-head">
         <div><h3 id="deadlineDialogTitle">Novo prazo</h3><p>Registre o vencimento e a prioridade.</p></div>
@@ -1329,7 +1329,7 @@
     </form>
   </dialog>
 
-  <dialog id="taskDialog">
+  <dialog id="taskDialog" aria-labelledby="taskDialogTitle">
     <form id="taskForm" class="modal">
       <div class="modal-head">
         <div><h3 id="taskDialogTitle">Nova tarefa</h3><p>Organize atividades do escritório.</p></div>
@@ -1350,7 +1350,7 @@
     </form>
   </dialog>
 
-  <dialog id="eventDialog">
+  <dialog id="eventDialog" aria-labelledby="eventDialogTitle">
     <form id="eventForm" class="modal">
       <div class="modal-head">
         <div><h3 id="eventDialogTitle">Novo compromisso</h3><p>Audiência, perícia, reunião ou diligência.</p></div>
@@ -1373,7 +1373,7 @@
     </form>
   </dialog>
 
-  <dialog id="financeDialog">
+  <dialog id="financeDialog" aria-labelledby="financeDialogTitle">
     <form id="financeForm" class="modal">
       <div class="modal-head">
         <div><h3 id="financeDialogTitle">Novo lançamento</h3><p>Registre honorários, despesas e repasses.</p></div>
@@ -1395,7 +1395,7 @@
     </form>
   </dialog>
 
-  <dialog id="leadDialog">
+  <dialog id="leadDialog" aria-labelledby="leadDialogTitle">
     <form id="leadForm" class="modal">
       <div class="modal-head">
         <div><h3 id="leadDialogTitle">Novo interessado</h3><p>Registre o contato antes da contratação.</p></div>
@@ -1417,11 +1417,11 @@
     </form>
   </dialog>
 
-  <dialog id="movementDialog">
+  <dialog id="movementDialog" aria-labelledby="movementDialogTitle">
     <form id="movementForm" class="modal">
       <div class="modal-head">
         <div>
-          <h3>Nova movimentação</h3>
+          <h3 id="movementDialogTitle">Nova movimentação</h3>
           <p>Você pode salvar internamente ou revisar a mensagem antes de enviar.</p>
         </div>
         <button class="btn ghost close-x" type="button" data-close>×</button>
@@ -1505,11 +1505,11 @@
     </form>
   </dialog>
 
-  <dialog id="previewDialog">
+  <dialog id="previewDialog" aria-labelledby="previewDialogTitle">
     <div class="modal">
       <div class="modal-head">
         <div>
-          <h3>Prévia da mensagem</h3>
+          <h3 id="previewDialogTitle">Prévia da mensagem</h3>
           <p>Confira o texto antes de enviar ao cliente.</p>
         </div>
         <button class="btn ghost close-x" type="button" data-close>×</button>
@@ -1525,10 +1525,10 @@
     </div>
   </dialog>
 
-  <dialog id="generatorDialog" class="wide">
+  <dialog id="generatorDialog" class="wide" aria-labelledby="generatorDialogTitle">
     <div class="modal">
       <div class="modal-head">
-        <div><h3>Gerar documento</h3><p>Escolha o modelo, o cliente e o processo. As variáveis são preenchidas com os dados cadastrados.</p></div>
+        <div><h3 id="generatorDialogTitle">Gerar documento</h3><p>Escolha o modelo, o cliente e o processo. As variáveis são preenchidas com os dados cadastrados.</p></div>
         <button class="btn ghost close-x" type="button" data-close>×</button>
       </div>
       <div class="modal-grid">
@@ -1555,7 +1555,7 @@
     </div>
   </dialog>
 
-  <dialog id="detailDialog">
+  <dialog id="detailDialog" aria-labelledby="detailTitle">
     <div class="modal">
       <div class="modal-head">
         <div><h3 id="detailTitle">Detalhes</h3><p id="detailSubtitle"></p></div>
@@ -1573,11 +1573,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=13"></script>
-  <script src="./team.js?v=13"></script>
-  <script src="./app.js?v=13"></script>
-  <script src="./organizer.js?v=13"></script>
-  <script src="./features.js?v=13"></script>
-  <script src="./deadline-calc.js?v=13"></script>
+  <script src="./admin.js?v=14"></script>
+  <script src="./team.js?v=14"></script>
+  <script src="./app.js?v=14"></script>
+  <script src="./organizer.js?v=14"></script>
+  <script src="./features.js?v=14"></script>
+  <script src="./deadline-calc.js?v=14"></script>
 </body>
 </html>

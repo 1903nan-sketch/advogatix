@@ -20,6 +20,18 @@
   // Ao criá-la (ver docs/supabase-pendencias.md), mude para true para gravar e ler os registros.
   const ACTIVITY_LOG_ENABLED = false;
 
+  if (!window.supabase?.createClient) {
+    const status = document.getElementById("authStatus");
+    const submit = document.getElementById("authSubmit");
+    if (status) {
+      status.textContent = "Não foi possível carregar o acesso seguro. Verifique sua conexão e atualize a página.";
+      status.className = "status err";
+    }
+    if (submit) submit.disabled = true;
+    console.error("AdvogaTix: biblioteca do Supabase indisponível.");
+    return;
+  }
+
   const rawSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const supabase = PREVIEW_READ_ONLY ? readOnlyClient(rawSupabase) : rawSupabase;
 
@@ -322,7 +334,9 @@
       const message = String(error?.message || "");
       const friendly = /invalid login credentials/i.test(message)
         ? "E-mail ou senha inválidos."
-        : (message || "Não foi possível entrar.");
+        : /failed to fetch|network|load failed/i.test(message)
+          ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+          : (message || "Não foi possível entrar.");
       setStatus($("#authStatus"), friendly, "err");
     } finally {
       setBusy(button, false);
@@ -365,41 +379,6 @@
       location.replace(location.pathname);
     } catch (error) {
       setStatus($("#setupPasswordStatus"), error.message || "Não foi possível criar a senha.", "err");
-    } finally {
-      setBusy(button, false);
-    }
-  });
-
-  $("#firmForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = event.submitter;
-    setBusy(button, true, "Criando");
-    setStatus($("#firmStatus"), "Criando escritório...");
-
-    try {
-      const payload = {
-        name: $("#firmInput").value.trim(),
-        slug: $("#slugInput").value
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9-]+/g, "-")
-          .replace(/^-+|-+$/g, ""),
-        whatsapp: $("#firmWhatsapp").value.trim() || null,
-        email: $("#firmEmail").value.trim() || null,
-        created_by: state.user.id,
-      };
-
-      const { error } = await supabase.from("law_firms").insert(payload);
-      if (error) throw error;
-
-      setStatus($("#firmStatus"), "Escritório criado.", "ok");
-      toast("Escritório criado com sucesso.");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await boot();
-    } catch (error) {
-      setStatus($("#firmStatus"), error.message || "Não foi possível criar o escritório.", "err");
     } finally {
       setBusy(button, false);
     }
