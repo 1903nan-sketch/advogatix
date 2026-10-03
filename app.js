@@ -213,6 +213,7 @@
   }
 
   function setStatus(el, message = "", type = "") {
+    if (!el) return;
     el.textContent = message;
     el.className = `status ${type}`;
   }
@@ -221,8 +222,9 @@
     if (!button) return;
     button.disabled = busy;
     button.classList.toggle("loading", busy);
+    button.setAttribute("aria-busy", String(busy));
     if (busy) {
-      button.dataset.oldText = button.textContent;
+      if (!button.dataset.oldText) button.dataset.oldText = button.textContent;
       button.textContent = label;
     } else if (button.dataset.oldText) {
       button.textContent = button.dataset.oldText;
@@ -1484,6 +1486,23 @@
     if (!body) return;
     new MutationObserver(() => labelTableRows(table)).observe(body, { childList: true });
   });
+
+  // Mensagens de formulário são anunciadas por leitores de tela sem interromper a navegação.
+  $$(".status").forEach((el) => {
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    el.setAttribute("aria-atomic", "true");
+  });
+
+  function updateConnectionStatus() {
+    const banner = $("#connectionBanner");
+    if (!banner) return;
+    banner.classList.toggle("hidden", navigator.onLine);
+  }
+
+  window.addEventListener("online", updateConnectionStatus);
+  window.addEventListener("offline", updateConnectionStatus);
+  updateConnectionStatus();
 
   if (PREVIEW_READ_ONLY) {
     document.body.classList.add("preview-mode");

@@ -13,9 +13,13 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
-  <link rel="stylesheet" href="./styles.css?v=14" />
+  <link rel="stylesheet" href="./styles.css?v=15" />
 </head>
 <body>
+  <div id="connectionBanner" class="connection-banner hidden" role="status" aria-live="polite">
+    <strong>Sem conexão com a internet.</strong>
+    <span>Algumas informações podem estar desatualizadas e alterações podem falhar.</span>
+  </div>
   <div id="previewBanner" class="preview-banner hidden" role="status">
     <strong>Preview somente leitura</strong>
     <span>Este ambiente mostra os dados reais, mas não grava, não exclui arquivos e não envia WhatsApp.</span>
@@ -865,7 +869,7 @@
     <form id="adminFirmForm" class="modal">
       <div class="modal-head">
         <div><h3 id="adminFirmDialogTitle">Novo escritório</h3><p>Venda e manutenção são controladas manualmente.</p></div>
-        <button class="btn ghost close-x" type="button" data-admin-close>×</button>
+        <button class="btn ghost close-x" type="button" data-admin-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="adminFirmName">Nome do escritório</label><input id="adminFirmName" required /></div>
@@ -897,7 +901,7 @@
     <form id="teamForm" class="modal">
       <div class="modal-head">
         <div><h3 id="teamDialogTitle">Adicionar membro</h3><p>O usuário receberá um convite para criar a própria senha.</p></div>
-        <button class="btn ghost close-x" type="button" data-team-close>×</button>
+        <button class="btn ghost close-x" type="button" data-team-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="teamName">Nome</label><input id="teamName" required /></div>
@@ -917,7 +921,7 @@
           <h3 id="clientDialogTitle">Novo cliente</h3>
           <p>Cadastre os dados principais do cliente.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <div class="modal-grid">
@@ -1037,7 +1041,7 @@
           <h3 id="caseDialogTitle">Novo processo</h3>
           <p>Cadastre as informações processuais usadas no painel e nas mensagens.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <div class="modal-grid">
@@ -1149,7 +1153,7 @@
     <form id="templateForm" class="modal">
       <div class="modal-head">
         <div><h3 id="templateDialogTitle">Novo modelo</h3><p>Crie textos reutilizáveis pelo escritório.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="templateTitle">Nome do modelo</label><input id="templateTitle" required placeholder="Ex.: Confirmação de audiência" /></div>
@@ -1172,7 +1176,7 @@
     <form id="documentForm" class="modal">
       <div class="modal-head">
         <div><h3 id="documentDialogTitle">Enviar documento</h3><p>O arquivo ficará no armazenamento privado do escritório.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="documentCase">Processo</label><select id="documentCase" required></select></div>
@@ -1193,7 +1197,7 @@
           <h3 id="clientFileTitle">Ficha do cliente</h3>
           <p id="clientFileSubtitle">Visão consolidada do relacionamento com o escritório.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <div id="clientFileSummary" class="metrics" style="margin-bottom:14px"></div>
@@ -1244,7 +1248,7 @@
           <h3 id="caseWorkspaceTitle">Processo</h3>
           <p id="caseWorkspaceSubtitle">Checklist, prazos e tarefas do processo.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <div id="caseHealthBox" class="notice" style="margin-bottom:12px"></div>
@@ -1289,7 +1293,7 @@
     <form id="deadlineForm" class="modal">
       <div class="modal-head">
         <div><h3 id="deadlineDialogTitle">Novo prazo</h3><p>Registre o vencimento e a prioridade.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="deadlineTitle">Prazo</label><input id="deadlineTitle" required placeholder="Ex.: Apresentar contestação" /></div>
@@ -1333,7 +1337,7 @@
     <form id="taskForm" class="modal">
       <div class="modal-head">
         <div><h3 id="taskDialogTitle">Nova tarefa</h3><p>Organize atividades do escritório.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="taskTitle">Tarefa</label><input id="taskTitle" required placeholder="Ex.: Conferir documentos do cliente" /></div>
@@ -1354,7 +1358,7 @@
     <form id="eventForm" class="modal">
       <div class="modal-head">
         <div><h3 id="eventDialogTitle">Novo compromisso</h3><p>Audiência, perícia, reunião ou diligência.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="eventTitle">Título</label><input id="eventTitle" required placeholder="Ex.: Audiência de instrução" /></div>
@@ -1377,7 +1381,7 @@
     <form id="financeForm" class="modal">
       <div class="modal-head">
         <div><h3 id="financeDialogTitle">Novo lançamento</h3><p>Registre honorários, despesas e repasses.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="financeDescription">Descrição</label><input id="financeDescription" required placeholder="Ex.: Parcela 1 - contrato de honorários" /></div>
@@ -1399,7 +1403,7 @@
     <form id="leadForm" class="modal">
       <div class="modal-head">
         <div><h3 id="leadDialogTitle">Novo interessado</h3><p>Registre o contato antes da contratação.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="leadName">Nome</label><input id="leadName" required placeholder="Nome do interessado" /></div>
@@ -1424,7 +1428,7 @@
           <h3 id="movementDialogTitle">Nova movimentação</h3>
           <p>Você pode salvar internamente ou revisar a mensagem antes de enviar.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <label for="movementCase">Processo</label>
@@ -1512,7 +1516,7 @@
           <h3 id="previewDialogTitle">Prévia da mensagem</h3>
           <p>Confira o texto antes de enviar ao cliente.</p>
         </div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
 
       <div id="messagePreview" class="preview"></div>
@@ -1529,7 +1533,7 @@
     <div class="modal">
       <div class="modal-head">
         <div><h3 id="generatorDialogTitle">Gerar documento</h3><p>Escolha o modelo, o cliente e o processo. As variáveis são preenchidas com os dados cadastrados.</p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <div class="modal-grid">
         <div class="full"><label for="genTemplate">Modelo</label><select id="genTemplate"></select></div>
@@ -1559,7 +1563,7 @@
     <div class="modal">
       <div class="modal-head">
         <div><h3 id="detailTitle">Detalhes</h3><p id="detailSubtitle"></p></div>
-        <button class="btn ghost close-x" type="button" data-close>×</button>
+        <button class="btn ghost close-x" type="button" data-close aria-label="Fechar janela">×</button>
       </div>
       <dl id="detailFields" class="detail-fields"></dl>
       <div id="detailText" class="preview hidden"></div>
@@ -1573,11 +1577,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=14"></script>
-  <script src="./team.js?v=14"></script>
-  <script src="./app.js?v=14"></script>
-  <script src="./organizer.js?v=14"></script>
-  <script src="./features.js?v=14"></script>
-  <script src="./deadline-calc.js?v=14"></script>
+  <script src="./admin.js?v=15"></script>
+  <script src="./team.js?v=15"></script>
+  <script src="./app.js?v=15"></script>
+  <script src="./organizer.js?v=15"></script>
+  <script src="./features.js?v=15"></script>
+  <script src="./deadline-calc.js?v=15"></script>
 </body>
 </html>

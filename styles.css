@@ -68,7 +68,7 @@ a{color:inherit}
 }
 
 /* Vidro fosco: base comum de cartões, diálogos e menus flutuantes. */
-.card,dialog,.global-search-results,.toast,.preview-banner{
+.card,dialog,.global-search-results,.toast,.preview-banner,.connection-banner{
   -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
 }
 
@@ -78,6 +78,12 @@ a{color:inherit}
   background:rgba(31,35,41,.72);border-bottom:1px solid rgba(255,255,255,.1);color:#fff;font-size:13px;text-align:center;
 }
 .preview-banner span{color:rgba(255,255,255,.72)}
+.connection-banner{
+  position:sticky;top:0;z-index:2450;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;justify-content:center;
+  padding:8px 14px;padding-top:max(8px,env(safe-area-inset-top));background:rgba(137,76,9,.9);
+  border-bottom:1px solid rgba(255,255,255,.18);color:#fff;font-size:13px;text-align:center;
+}
+.connection-banner span{color:rgba(255,255,255,.82)}
 body:not(.preview-mode) .landing .wrap,body:not(.preview-mode) #app .wrap{padding-top:max(20px,env(safe-area-inset-top))}
 .topbar{
   display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0 22px;

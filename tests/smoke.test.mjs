@@ -58,6 +58,20 @@ test("diálogos apontam para um título existente", () => {
   }
 });
 
+test("botões de fechar possuem nome acessível", () => {
+  const closeButtons = [...html.matchAll(/<button\b[^>]*class="[^"]*close-x[^"]*"[^>]*>/g)].map((match) => attributes(match[0]));
+  assert.ok(closeButtons.length > 0);
+  for (const button of closeButtons) assert.ok(button["aria-label"], "Botão de fechar sem aria-label");
+});
+
+test("aviso de conexão está presente e é anunciado", () => {
+  const banner = html.match(/<div\b[^>]*id="connectionBanner"[^>]*>/)?.[0];
+  assert.ok(banner, "Aviso de conexão ausente");
+  const attrs = attributes(banner);
+  assert.equal(attrs.role, "status");
+  assert.equal(attrs["aria-live"], "polite");
+});
+
 test("seletores de ID literais apontam para elementos existentes", () => {
   const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]));
   for (const file of scripts.filter((name) => name !== "sw.js")) {
