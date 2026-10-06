@@ -940,7 +940,7 @@
       .replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
     const path = state.firm.id + "/" + caseId + "/" + Date.now() + "-" + safeName;
 
-    const { error: uploadError } = await supabase.storage.from("case-documents").upload(path, file, {
+    const { error: uploadError } = await supabase.storage.from("advogatix-case-documents").upload(path, file, {
       cacheControl: "3600",
       upsert: false,
       contentType: file.type || undefined
@@ -961,7 +961,7 @@
     }).select("id").single();
 
     if (rowError) {
-      await supabase.storage.from("case-documents").remove([path]);
+      await supabase.storage.from("advogatix-case-documents").remove([path]);
       throw rowError;
     }
     core.logActivity("document.uploaded", "document", createdDoc?.id, "Documento enviado: " + file.name, { case_id: caseId, size_bytes: file.size });
@@ -1002,7 +1002,7 @@
     if (!doc) return;
     setBusy(button, true, "Abrindo");
     try {
-      const { data, error } = await supabase.storage.from("case-documents").download(doc.storage_path);
+      const { data, error } = await supabase.storage.from("advogatix-case-documents").download(doc.storage_path);
       if (error) throw error;
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
@@ -1027,7 +1027,7 @@
     try {
       // O arquivo sensível é removido primeiro. Assim nunca fica órfão e invisível
       // no armazenamento caso a remoção do registro falhe na etapa seguinte.
-      const { error: storageError } = await supabase.storage.from("case-documents").remove([doc.storage_path]);
+      const { error: storageError } = await supabase.storage.from("advogatix-case-documents").remove([doc.storage_path]);
       if (storageError) throw storageError;
       const { error: dbError } = await supabase.from("documents").delete()
         .eq("id", doc.id).eq("firm_id", state.firm.id);
