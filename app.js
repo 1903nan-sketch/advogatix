@@ -4,8 +4,8 @@
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {}));
   }
 
-  const SUPABASE_URL = "https://llxquroiaehemebuikwg.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_JYxa0dZA0VkJEVuQUoXT5w_j0XamP_q";
+  const SUPABASE_URL = "https://xraygbmishqxyrtiwyxy.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_jXk4NFg_HOVtfq0KXJ375w_egKlnJXz";
 
   // Este preview usa o mesmo Supabase da produção. Enquanto não houver um banco
   // separado para o preview, todas as gravações, uploads, exclusões e chamadas
@@ -32,7 +32,7 @@
     return;
   }
 
-  const rawSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const rawSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { db: { schema: "advogatix" } });
   const supabase = PREVIEW_READ_ONLY ? readOnlyClient(rawSupabase) : rawSupabase;
 
   function blockedResult() {
