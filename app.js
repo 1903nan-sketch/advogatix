@@ -320,6 +320,27 @@
     $("#togglePassword").title = showing ? "Mostrar senha" : "Ocultar senha";
   });
 
+  $("#forgotPasswordBtn")?.addEventListener("click", async () => {
+    const email = $("#email").value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus($("#authStatus"), "Informe seu e-mail no campo acima para recuperar a senha.", "err");
+      $("#email").focus();
+      return;
+    }
+    const button = $("#forgotPasswordBtn");
+    setBusy(button, true, "Enviando");
+    try {
+      const redirectTo = new URL(location.pathname + "?setup=password", location.origin).href;
+      const { error } = await rawSupabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      setStatus($("#authStatus"), "Se houver uma conta para esse e-mail, você receberá um link para redefinir a senha. Confira também o spam.", "ok");
+    } catch (error) {
+      setStatus($("#authStatus"), error?.message || "Não foi possível enviar o e-mail de recuperação.", "err");
+    } finally {
+      setBusy(button, false);
+    }
+  });
+
   $("#authForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.submitter || $("#authSubmit");
@@ -1267,7 +1288,7 @@
     const refreshToken = hashParams.get("refresh_token");
     const inviteType = hashParams.get("type");
 
-    if (accessToken && refreshToken && (!inviteType || inviteType === "invite")) {
+    if (accessToken && refreshToken && (!inviteType || inviteType === "invite" || inviteType === "recovery")) {
       const { data, error } = await rawSupabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -1298,7 +1319,7 @@
         inviteSession = await establishSetupSessionFromUrl();
       } catch (error) {
         console.error(error);
-        setStatus($("#setupPasswordStatus"), "Este convite é inválido ou expirou. Solicite um novo convite.", "err");
+        setStatus($("#setupPasswordStatus"), "Este link é inválido ou expirou. Solicite outro link de acesso ou recuperação.", "err");
       }
     }
 
